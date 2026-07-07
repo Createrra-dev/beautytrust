@@ -218,10 +218,11 @@ class DashboardStatCard extends StatelessWidget {
 				border: Border.all(color: AppColors.border),
 			),
 			child: Column(
-				crossAxisAlignment: CrossAxisAlignment.start,
+				crossAxisAlignment: CrossAxisAlignment.center,
 				children: [
 					Text(
 						title,
+						textAlign: TextAlign.center,
 						style: const TextStyle(
 							color: AppColors.textMuted,
 							fontSize: 13,
@@ -231,6 +232,7 @@ class DashboardStatCard extends StatelessWidget {
 					const SizedBox(height: 12),
 					Text(
 						value,
+						textAlign: TextAlign.center,
 						style: const TextStyle(
 							color: AppColors.textPrimary,
 							fontSize: 28,
@@ -240,6 +242,7 @@ class DashboardStatCard extends StatelessWidget {
 					const SizedBox(height: 8),
 					Text(
 						trendLabel,
+						textAlign: TextAlign.center,
 						style: TextStyle(
 							color: trendPositive ? AppColors.secondary : AppColors.textMuted,
 							fontSize: 13,
