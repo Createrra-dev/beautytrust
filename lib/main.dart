@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'config/app_branding.dart';
-import 'screens/auth/phone_login_screen.dart';
+import 'screens/app_launch_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
+	WidgetsFlutterBinding.ensureInitialized();
 	runApp(const BeautyTrustApp());
 }
 
@@ -16,7 +17,7 @@ class BeautyTrustApp extends StatelessWidget {
 		return MaterialApp(
 			title: AppBranding.appName,
 			theme: AppTheme.dark,
-			home: const PhoneLoginScreen(),
+			home: const AppLaunchScreen(),
 		);
 	}
 }
