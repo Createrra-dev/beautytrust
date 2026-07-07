@@ -4,6 +4,7 @@ import '../../models/appointment_record.dart';
 import '../../models/client_check_result.dart';
 import '../../models/client_profile.dart';
 import '../../theme/app_theme.dart';
+import '../reviews/master_review_card.dart';
 
 class ClientCheckResultPanel extends StatelessWidget {
 	const ClientCheckResultPanel({
@@ -122,7 +123,7 @@ class _ClientHeader extends StatelessWidget {
 					),
 				),
 				const SizedBox(width: 8),
-				_RatingWithBadge(
+				ReviewRatingBadge(
 					rating: profile.reviewsAverage,
 					label: profile.ratingLabel,
 					ratingFontSize: 24,
@@ -297,141 +298,11 @@ class _ReviewsPreview extends StatelessWidget {
 				const SizedBox(height: 12),
 				...reviews.map(
 					(review) => Padding(
-						padding: const EdgeInsets.only(bottom: 12),
-						child: _ReviewItem(review: review),
+						padding: const EdgeInsets.only(bottom: 8),
+						child: MasterReviewCard(review: review),
 					),
 				),
 			],
-		);
-	}
-}
-
-class _ReviewItem extends StatelessWidget {
-	const _ReviewItem({required this.review});
-
-	final MasterReview review;
-
-	@override
-	Widget build(BuildContext context) {
-		return Column(
-			crossAxisAlignment: CrossAxisAlignment.start,
-			children: [
-				Row(
-					children: [
-						CircleAvatar(
-							radius: 14,
-							backgroundColor: AppColors.surfaceElevated,
-							child: Text(
-								review.masterName.substring(0, 1),
-								style: const TextStyle(
-									color: AppColors.textPrimary,
-									fontSize: 11,
-									fontWeight: FontWeight.w600,
-								),
-							),
-						),
-						const SizedBox(width: 8),
-						Expanded(
-							child: Text(
-								review.masterName,
-								style: const TextStyle(
-									color: AppColors.textPrimary,
-									fontSize: 14,
-									fontWeight: FontWeight.w600,
-								),
-							),
-						),
-						_RatingWithBadge(
-							rating: review.rating,
-							label: review.tag,
-							ratingFontSize: 15,
-							labelFontSize: 10,
-						),
-					],
-				),
-				const SizedBox(height: 8),
-				Text(
-					review.text,
-					style: const TextStyle(
-						color: AppColors.textMuted,
-						fontSize: 13,
-						height: 1.4,
-					),
-				),
-			],
-		);
-	}
-}
-
-class _RatingWithBadge extends StatelessWidget {
-	const _RatingWithBadge({
-		required this.rating,
-		required this.label,
-		required this.ratingFontSize,
-		required this.labelFontSize,
-	});
-
-	final double rating;
-	final String label;
-	final double ratingFontSize;
-	final double labelFontSize;
-
-	@override
-	Widget build(BuildContext context) {
-		final color = appointmentRatingColor(rating);
-
-		return Column(
-			crossAxisAlignment: CrossAxisAlignment.end,
-			mainAxisSize: MainAxisSize.min,
-			children: [
-				Text(
-					formatAppointmentRating(rating),
-					style: TextStyle(
-						color: color,
-						fontSize: ratingFontSize,
-						fontWeight: FontWeight.w700,
-						height: 1,
-					),
-				),
-				const SizedBox(height: 4),
-				_TextBadge(
-					label: label,
-					color: color,
-					fontSize: labelFontSize,
-				),
-			],
-		);
-	}
-}
-
-class _TextBadge extends StatelessWidget {
-	const _TextBadge({
-		required this.label,
-		required this.color,
-		required this.fontSize,
-	});
-
-	final String label;
-	final Color color;
-	final double fontSize;
-
-	@override
-	Widget build(BuildContext context) {
-		return Container(
-			padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-			decoration: BoxDecoration(
-				borderRadius: BorderRadius.circular(10),
-				border: Border.all(color: color.withValues(alpha: 0.55)),
-			),
-			child: Text(
-				label,
-				style: TextStyle(
-					color: color,
-					fontSize: fontSize,
-					fontWeight: FontWeight.w600,
-					height: 1.2,
-				),
-			),
 		);
 	}
 }
