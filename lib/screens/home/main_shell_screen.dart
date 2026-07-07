@@ -4,6 +4,7 @@ import 'package:motion_tab_bar/MotionTabBarController.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
+import '../check/check_tab_navigator.dart';
 import '../history/history_tab_navigator.dart';
 import 'home_tab_navigator.dart';
 
@@ -42,7 +43,7 @@ class _MainShellScreenState extends State<MainShellScreen>
 					physics: const NeverScrollableScrollPhysics(),
 					controller: _motionTabBarController,
 					children: const [
-						_PlaceholderTab(title: 'Проверка'),
+						CheckTabNavigator(),
 						HistoryTabNavigator(),
 						HomeTabNavigator(),
 						_PlaceholderTab(title: 'Сообщество'),
