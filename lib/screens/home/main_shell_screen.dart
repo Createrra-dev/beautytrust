@@ -6,6 +6,7 @@ import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
 import '../check/check_tab_navigator.dart';
 import '../history/history_tab_navigator.dart';
+import '../profile/profile_tab_navigator.dart';
 import 'home_tab_navigator.dart';
 
 class MainShellScreen extends StatefulWidget {
@@ -47,7 +48,7 @@ class _MainShellScreenState extends State<MainShellScreen>
 						_PlaceholderTab(title: 'Сообщество'),
 						HomeTabNavigator(),
 						HistoryTabNavigator(),
-						_PlaceholderTab(title: 'Профиль'),
+						ProfileTabNavigator(),
 					],
 				),
 			),

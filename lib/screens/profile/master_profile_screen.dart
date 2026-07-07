@@ -1,0 +1,298 @@
+import 'package:flutter/material.dart';
+
+import '../../models/appointment_record.dart';
+import '../../models/master_profile.dart';
+import '../../services/master_profile_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/profile/profile_menu_item.dart';
+
+class MasterProfileScreen extends StatelessWidget {
+	const MasterProfileScreen({super.key});
+
+	@override
+	Widget build(BuildContext context) {
+		final profile = MasterProfileService.currentMaster;
+
+		return SafeArea(
+			child: SingleChildScrollView(
+				padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+				child: Column(
+					crossAxisAlignment: CrossAxisAlignment.stretch,
+					children: [
+						const _ProfileHeader(),
+						const SizedBox(height: 24),
+						_ProfileHero(profile: profile),
+						const SizedBox(height: 24),
+						_ProfileStatsRow(profile: profile),
+						const SizedBox(height: 20),
+						_ProfileMenuCard(
+							onItemTap: (item) => _onMenuTap(context, item),
+							tariffLabel: profile.tariffLabel,
+						),
+					],
+				),
+			),
+		);
+	}
+
+	void _onMenuTap(BuildContext context, MasterProfileMenuItem item) {
+		ScaffoldMessenger.of(context).showSnackBar(
+			SnackBar(content: Text('«${item.title}» скоро будет доступно')),
+		);
+	}
+}
+
+class _ProfileHeader extends StatelessWidget {
+	const _ProfileHeader();
+
+	@override
+	Widget build(BuildContext context) {
+		return const Padding(
+			padding: EdgeInsets.symmetric(vertical: 8),
+			child: Text(
+				'Профиль мастера',
+				textAlign: TextAlign.center,
+				style: TextStyle(
+					color: AppColors.textPrimary,
+					fontSize: 18,
+					fontWeight: FontWeight.w600,
+				),
+			),
+		);
+	}
+}
+
+class _ProfileHero extends StatelessWidget {
+	const _ProfileHero({required this.profile});
+
+	final MasterProfile profile;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			children: [
+				Container(
+					decoration: BoxDecoration(
+						shape: BoxShape.circle,
+						border: Border.all(
+							color: AppColors.border,
+							width: 2,
+						),
+					),
+					child: CircleAvatar(
+						radius: 44,
+						backgroundColor: AppColors.surfaceElevated,
+						child: Text(
+							profile.firstName.substring(0, 1),
+							style: const TextStyle(
+								color: AppColors.textPrimary,
+								fontSize: 32,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					),
+				),
+				const SizedBox(height: 14),
+				Text(
+					profile.firstName,
+					style: const TextStyle(
+						color: AppColors.textPrimary,
+						fontSize: 22,
+						fontWeight: FontWeight.w700,
+					),
+				),
+				const SizedBox(height: 10),
+				Container(
+					padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+					decoration: BoxDecoration(
+						color: AppColors.secondary.withValues(alpha: 0.12),
+						borderRadius: BorderRadius.circular(20),
+						border: Border.all(
+							color: AppColors.secondary.withValues(alpha: 0.35),
+						),
+					),
+					child: Text(
+						profile.badgeLabel,
+						style: const TextStyle(
+							color: AppColors.secondary,
+							fontSize: 13,
+							fontWeight: FontWeight.w600,
+						),
+					),
+				),
+				const SizedBox(height: 10),
+				Row(
+					mainAxisSize: MainAxisSize.min,
+					children: [
+						const Icon(
+							Icons.star_rounded,
+							size: 18,
+							color: AppColors.secondary,
+						),
+						const SizedBox(width: 4),
+						Text(
+							'${formatAppointmentRating(profile.rating)} (${profile.reviewsCount} отзывов)',
+							style: const TextStyle(
+								color: AppColors.secondary,
+								fontSize: 14,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					],
+				),
+			],
+		);
+	}
+}
+
+class _ProfileStatsRow extends StatelessWidget {
+	const _ProfileStatsRow({required this.profile});
+
+	final MasterProfile profile;
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+			decoration: BoxDecoration(
+				color: AppColors.surface,
+				borderRadius: BorderRadius.circular(16),
+				border: Border.all(color: AppColors.border),
+			),
+			child: IntrinsicHeight(
+				child: Row(
+					children: [
+						Expanded(
+							child: _StatColumn(
+								value: '${profile.clientsCount}',
+								label: 'Клиентов',
+							),
+						),
+						const _VerticalDivider(),
+						Expanded(
+							child: _StatColumn(
+								value: '${profile.preventedNoShows}',
+								label: 'Неявок избежано',
+							),
+						),
+						const _VerticalDivider(),
+						Expanded(
+							child: _StatColumn(
+								value: formatServicePrice(profile.protectedIncome),
+								label: 'Защищено',
+							),
+						),
+					],
+				),
+			),
+		);
+	}
+}
+
+class _VerticalDivider extends StatelessWidget {
+	const _VerticalDivider();
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			width: 1,
+			margin: const EdgeInsets.symmetric(horizontal: 4),
+			color: AppColors.border,
+		);
+	}
+}
+
+class _StatColumn extends StatelessWidget {
+	const _StatColumn({
+		required this.value,
+		required this.label,
+	});
+
+	final String value;
+	final String label;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			mainAxisSize: MainAxisSize.min,
+			children: [
+				Text(
+					value,
+					textAlign: TextAlign.center,
+					maxLines: 1,
+					overflow: TextOverflow.ellipsis,
+					style: const TextStyle(
+						color: AppColors.textPrimary,
+						fontSize: 18,
+						fontWeight: FontWeight.w700,
+					),
+				),
+				const SizedBox(height: 6),
+				Text(
+					label,
+					textAlign: TextAlign.center,
+					style: const TextStyle(
+						color: AppColors.textMuted,
+						fontSize: 12,
+						height: 1.2,
+					),
+				),
+			],
+		);
+	}
+}
+
+class _ProfileMenuCard extends StatelessWidget {
+	const _ProfileMenuCard({
+		required this.onItemTap,
+		required this.tariffLabel,
+	});
+
+	final ValueChanged<MasterProfileMenuItem> onItemTap;
+	final String tariffLabel;
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			decoration: BoxDecoration(
+				color: AppColors.surface,
+				borderRadius: BorderRadius.circular(16),
+				border: Border.all(color: AppColors.border),
+			),
+			child: Column(
+				children: [
+					ProfileMenuItem(
+						icon: Icons.bar_chart_rounded,
+						title: MasterProfileMenuItem.statistics.title,
+						onTap: () => onItemTap(MasterProfileMenuItem.statistics),
+					),
+					const Divider(color: AppColors.border, height: 1),
+					ProfileMenuItem(
+						icon: Icons.chat_bubble_outline_rounded,
+						title: MasterProfileMenuItem.reviews.title,
+						onTap: () => onItemTap(MasterProfileMenuItem.reviews),
+					),
+					const Divider(color: AppColors.border, height: 1),
+					ProfileMenuItem(
+						icon: Icons.workspace_premium_outlined,
+						title: MasterProfileMenuItem.tariff.title,
+						trailingLabel: tariffLabel,
+						onTap: () => onItemTap(MasterProfileMenuItem.tariff),
+					),
+					const Divider(color: AppColors.border, height: 1),
+					ProfileMenuItem(
+						icon: Icons.settings_outlined,
+						title: MasterProfileMenuItem.settings.title,
+						onTap: () => onItemTap(MasterProfileMenuItem.settings),
+					),
+					const Divider(color: AppColors.border, height: 1),
+					ProfileMenuItem(
+						icon: Icons.info_outline_rounded,
+						title: MasterProfileMenuItem.support.title,
+						onTap: () => onItemTap(MasterProfileMenuItem.support),
+					),
+				],
+			),
+		);
+	}
+}
