@@ -4,6 +4,7 @@ import '../../models/dashboard_period.dart';
 import '../../services/dashboard_data_service.dart';
 import '../../widgets/home/current_appointments_section.dart';
 import '../../widgets/home/dashboard_top_section.dart';
+import '../../widgets/home/home_quick_phone_check.dart';
 import '../../widgets/home/period_picker_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -62,6 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
 							stats: stats,
 							onPeriodTap: _openPeriodPicker,
 						),
+						const SizedBox(height: 12),
+						const HomeQuickPhoneCheck(),
 						const SizedBox(height: 28),
 						CurrentAppointmentsSection(appointments: appointments),
 					],

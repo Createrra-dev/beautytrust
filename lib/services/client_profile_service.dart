@@ -8,6 +8,13 @@ class ClientProfileService {
 	ClientProfileService._();
 
 	static ClientProfile profileFor(AppointmentRecord appointment) {
+		if (appointment.clientPhoneDigits.length == 10) {
+			final checkResult = _checksByPhoneDigits[appointment.clientPhoneDigits];
+			if (checkResult != null) {
+				return checkResult.profile;
+			}
+		}
+
 		return _profilesById[appointment.id] ?? _profileFromAppointment(appointment);
 	}
 
@@ -23,9 +30,12 @@ class ClientProfileService {
 	static ClientProfile _profileFromAppointment(AppointmentRecord appointment) {
 		final ratingLabel = _ratingLabel(appointment.clientRating);
 		final reviews = DemoMasterReviews.ekaterina;
+		final phone = appointment.clientPhoneDigits.length == 10
+			? formatPhoneDisplay(appointment.clientPhoneDigits)
+			: '+7 (999) 000-00-00';
 
 		return ClientProfile(
-			phone: '+7 (999) 000-00-00',
+			phone: phone,
 			ratingLabel: ratingLabel,
 			reviewsAverage: appointment.clientRating,
 			reviewsCount: reviews.length,

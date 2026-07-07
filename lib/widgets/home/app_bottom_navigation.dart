@@ -24,6 +24,7 @@ class AppBottomNavigation extends StatelessWidget {
 	];
 
 	static const homeTabIndex = 2;
+	static const checkTabIndex = 0;
 
 	static const _checkTabLogoSize = 26.0;
 	static const _checkTabLogoSelectedSize = 24.0;

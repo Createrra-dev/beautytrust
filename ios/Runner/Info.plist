@@ -60,5 +60,9 @@
 	<array>
 		<string>_dartVmService._tcp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Нужен доступ к камере, чтобы сделать фото для аватара профиля.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Нужен доступ к фотографиям, чтобы выбрать аватар профиля.</string>
 </dict>
 </plist>

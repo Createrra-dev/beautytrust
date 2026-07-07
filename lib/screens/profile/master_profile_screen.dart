@@ -2,14 +2,64 @@ import 'package:flutter/material.dart';
 
 import '../../models/appointment_record.dart';
 import '../../models/master_profile.dart';
+import '../../services/master_avatar_service.dart';
 import '../../services/master_profile_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_snack_bar.dart';
+import '../../widgets/profile/avatar_picker_sheet.dart';
+import '../../widgets/profile/master_avatar.dart';
 import '../../widgets/profile/profile_menu_item.dart';
+import '../support/support_tickets_screen.dart';
 import 'tariffs_screen.dart';
 
-class MasterProfileScreen extends StatelessWidget {
+class MasterProfileScreen extends StatefulWidget {
 	const MasterProfileScreen({super.key});
+
+	@override
+	State<MasterProfileScreen> createState() => _MasterProfileScreenState();
+}
+
+class _MasterProfileScreenState extends State<MasterProfileScreen> {
+	final _avatarService = MasterAvatarService.instance;
+
+	@override
+	void initState() {
+		super.initState();
+		_avatarService.addListener(_onAvatarChanged);
+		_avatarService.load();
+	}
+
+	@override
+	void dispose() {
+		_avatarService.removeListener(_onAvatarChanged);
+		super.dispose();
+	}
+
+	void _onAvatarChanged() {
+		setState(() {});
+	}
+
+	Future<void> _pickAvatar() async {
+		final action = await showAvatarPickerSheet(context);
+		if (!mounted || action == null) {
+			return;
+		}
+
+		final saved = switch (action) {
+			AvatarPickerAction.camera => await _avatarService.pickFromCamera(),
+			AvatarPickerAction.gallery => await _avatarService.pickFromGallery(),
+		};
+
+		if (!mounted || !saved) {
+			return;
+		}
+
+		AppSnackBar.show(
+			context,
+			'Фото профиля обновлено',
+			type: AppSnackBarType.success,
+		);
+	}
 
 	@override
 	Widget build(BuildContext context) {
@@ -23,7 +73,12 @@ class MasterProfileScreen extends StatelessWidget {
 					children: [
 						const _ProfileHeader(),
 						const SizedBox(height: 24),
-						_ProfileHero(profile: profile),
+						_ProfileHero(
+							profile: profile,
+							avatarPath: _avatarService.avatarPath,
+							isAvatarLoading: _avatarService.isLoading,
+							onAvatarTap: _pickAvatar,
+						),
 						const SizedBox(height: 24),
 						_ProfileStatsRow(profile: profile),
 						const SizedBox(height: 20),
@@ -40,6 +95,11 @@ class MasterProfileScreen extends StatelessWidget {
 	void _onMenuTap(BuildContext context, MasterProfileMenuItem item) {
 		if (item == MasterProfileMenuItem.tariff) {
 			Navigator.of(context).pushNamed(TariffsScreen.routeName);
+			return;
+		}
+
+		if (item == MasterProfileMenuItem.support) {
+			Navigator.of(context).pushNamed(SupportTicketsScreen.routeName);
 			return;
 		}
 
@@ -71,34 +131,27 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _ProfileHero extends StatelessWidget {
-	const _ProfileHero({required this.profile});
+	const _ProfileHero({
+		required this.profile,
+		required this.avatarPath,
+		required this.isAvatarLoading,
+		required this.onAvatarTap,
+	});
 
 	final MasterProfile profile;
+	final String? avatarPath;
+	final bool isAvatarLoading;
+	final VoidCallback onAvatarTap;
 
 	@override
 	Widget build(BuildContext context) {
 		return Column(
 			children: [
-				Container(
-					decoration: BoxDecoration(
-						shape: BoxShape.circle,
-						border: Border.all(
-							color: AppColors.border,
-							width: 2,
-						),
-					),
-					child: CircleAvatar(
-						radius: 44,
-						backgroundColor: AppColors.surfaceElevated,
-						child: Text(
-							profile.firstName.substring(0, 1),
-							style: const TextStyle(
-								color: AppColors.textPrimary,
-								fontSize: 32,
-								fontWeight: FontWeight.w600,
-							),
-						),
-					),
+				MasterAvatar(
+					firstName: profile.firstName,
+					avatarPath: avatarPath,
+					isLoading: isAvatarLoading,
+					onTap: onAvatarTap,
 				),
 				const SizedBox(height: 14),
 				Text(

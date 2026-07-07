@@ -18,4 +18,8 @@ class MainShellNavigation {
 	void goToHome() {
 		_selectTab?.call(AppBottomNavigation.homeTabIndex);
 	}
+
+	void goToCheck() {
+		_selectTab?.call(AppBottomNavigation.checkTabIndex);
+	}
 }

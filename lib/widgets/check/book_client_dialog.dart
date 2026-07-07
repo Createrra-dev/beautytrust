@@ -6,6 +6,7 @@ import '../../models/client_check_result.dart';
 import '../../models/master_service.dart';
 import '../../services/dashboard_data_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/phone_formatter.dart';
 
 Future<bool> showBookClientDialog({
 	required BuildContext context,
@@ -113,14 +114,16 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 		final profile = widget.checkResult.profile;
 		final rating = profile.reviewsAverage;
 
+		final phoneDigits = extractPhoneDigits(profile.phone);
+
 		DashboardDataService.addAppointment(
 			AppointmentRecord(
 				id: DashboardDataService.nextAppointmentId(),
 				clientName: clientName,
+				clientPhoneDigits: phoneDigits,
 				serviceName: service.name,
 				serviceDurationLabel: service.durationLabel,
-				timeLabel: formatAppointmentTimeLabel(appointmentDate),
-				dateLabel: formatAppointmentDateLabel(appointmentDate),
+				scheduledAt: appointmentDate,
 				servicePrice: service.price,
 				clientRating: rating,
 				riskLevel: appointmentRiskLevelForRating(rating),

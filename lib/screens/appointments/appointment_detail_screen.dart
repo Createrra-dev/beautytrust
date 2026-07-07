@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../../models/appointment_record.dart';
 import '../../models/client_profile.dart';
 import '../../services/client_profile_service.dart';
+import '../../services/dashboard_data_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_snack_bar.dart';
 import '../../widgets/reviews/master_review_card.dart';
+import 'visit_result_screen.dart';
+import 'edit_appointment_screen.dart';
 
-class AppointmentDetailScreen extends StatelessWidget {
+class AppointmentDetailScreen extends StatefulWidget {
 	const AppointmentDetailScreen({
 		super.key,
 		required this.appointment,
@@ -18,7 +21,74 @@ class AppointmentDetailScreen extends StatelessWidget {
 	final AppointmentRecord appointment;
 
 	@override
+	State<AppointmentDetailScreen> createState() => _AppointmentDetailScreenState();
+}
+
+class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
+	final _dashboardService = DashboardDataService.instance;
+
+	@override
+	void initState() {
+		super.initState();
+		_dashboardService.addListener(_onDashboardChanged);
+	}
+
+	@override
+	void dispose() {
+		_dashboardService.removeListener(_onDashboardChanged);
+		super.dispose();
+	}
+
+	void _onDashboardChanged() {
+		setState(() {});
+	}
+
+	AppointmentRecord get _appointment {
+		return DashboardDataService.appointmentById(widget.appointment.id) ??
+			widget.appointment;
+	}
+
+	Future<void> _openVisitResultScreen() async {
+		final saved = await Navigator.of(context).push<bool>(
+			MaterialPageRoute(
+				builder: (context) => VisitResultScreen(appointment: _appointment),
+			),
+		);
+
+		if (!mounted || saved != true) {
+			return;
+		}
+
+		AppSnackBar.show(
+			context,
+			'Результат визита сохранён',
+			type: AppSnackBarType.success,
+		);
+	}
+
+	Future<void> _openEditScreen() async {
+		final phoneChanged = await Navigator.of(context).push<bool>(
+			MaterialPageRoute(
+				builder: (context) => EditAppointmentScreen(appointment: _appointment),
+			),
+		);
+
+		if (!mounted || phoneChanged == null) {
+			return;
+		}
+
+		AppSnackBar.show(
+			context,
+			phoneChanged
+				? 'Запись обновлена, рейтинг клиента пересчитан'
+				: 'Запись обновлена',
+			type: AppSnackBarType.success,
+		);
+	}
+
+	@override
 	Widget build(BuildContext context) {
+		final appointment = _appointment;
 		final profile = ClientProfileService.profileFor(appointment);
 		final ratingColor = appointmentRatingColor(profile.reviewsAverage);
 
@@ -41,7 +111,11 @@ class AppointmentDetailScreen extends StatelessWidget {
 									ratingColor: ratingColor,
 								),
 								const SizedBox(height: 12),
-								_AppointmentDetailsCard(appointment: appointment),
+								_AppointmentDetailsCard(
+									appointment: appointment,
+									onEdit: _openEditScreen,
+									onVisitResult: _openVisitResultScreen,
+								),
 							],
 						),
 					),
@@ -220,9 +294,15 @@ class _ClientDataCard extends StatelessWidget {
 }
 
 class _AppointmentDetailsCard extends StatelessWidget {
-	const _AppointmentDetailsCard({required this.appointment});
+	const _AppointmentDetailsCard({
+		required this.appointment,
+		required this.onEdit,
+		required this.onVisitResult,
+	});
 
 	final AppointmentRecord appointment;
+	final VoidCallback onEdit;
+	final VoidCallback onVisitResult;
 
 	@override
 	Widget build(BuildContext context) {
@@ -237,6 +317,7 @@ class _AppointmentDetailsCard extends StatelessWidget {
 				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
 					Row(
+						crossAxisAlignment: CrossAxisAlignment.start,
 						children: [
 							const Icon(
 								Icons.calendar_today_outlined,
@@ -253,6 +334,21 @@ class _AppointmentDetailsCard extends StatelessWidget {
 										fontWeight: FontWeight.w600,
 									),
 								),
+							),
+							_AppointmentActionIconButton(
+								icon: Icons.edit_outlined,
+								color: AppColors.primary,
+								onPressed: onEdit,
+							),
+							_AppointmentActionIconButton(
+								icon: Icons.delete_outline,
+								color: AppColors.error,
+								onPressed: () {
+									AppSnackBar.show(
+										context,
+										'Удаление записи скоро будет доступно',
+									);
+								},
 							),
 						],
 					),
@@ -274,46 +370,42 @@ class _AppointmentDetailsCard extends StatelessWidget {
 						),
 					),
 					const SizedBox(height: 14),
-					Row(
-						children: [
-							Expanded(
-								child: OutlinedButton.icon(
-									onPressed: () {
-										AppSnackBar.show(
-											context,
-											'Редактирование записи скоро будет доступно',
-										);
-									},
-									icon: const Icon(Icons.edit_outlined, size: 18),
-									label: const Text('Редактировать'),
-									style: OutlinedButton.styleFrom(
-										foregroundColor: AppColors.primary,
-										side: const BorderSide(color: AppColors.primary),
-										padding: const EdgeInsets.symmetric(vertical: 12),
-									),
-								),
-							),
-							const SizedBox(width: 10),
-							Expanded(
-								child: OutlinedButton.icon(
-									onPressed: () {
-										AppSnackBar.show(
-											context,
-											'Удаление записи скоро будет доступно',
-										);
-									},
-									icon: const Icon(Icons.delete_outline, size: 18),
-									label: const Text('Удалить'),
-									style: OutlinedButton.styleFrom(
-										foregroundColor: AppColors.error,
-										side: const BorderSide(color: AppColors.error),
-										padding: const EdgeInsets.symmetric(vertical: 12),
-									),
-								),
-							),
-						],
+					FilledButton.icon(
+						onPressed: onVisitResult,
+						icon: const Icon(Icons.fact_check_outlined, size: 20),
+						label: const Text('Результат визита'),
 					),
 				],
+			),
+		);
+	}
+}
+
+class _AppointmentActionIconButton extends StatelessWidget {
+	const _AppointmentActionIconButton({
+		required this.icon,
+		required this.color,
+		required this.onPressed,
+	});
+
+	final IconData icon;
+	final Color color;
+	final VoidCallback onPressed;
+
+	@override
+	Widget build(BuildContext context) {
+		return IconButton(
+			onPressed: onPressed,
+			padding: EdgeInsets.zero,
+			visualDensity: VisualDensity.compact,
+			constraints: const BoxConstraints(
+				minWidth: 32,
+				minHeight: 32,
+			),
+			icon: Icon(
+				icon,
+				size: 20,
+				color: color,
 			),
 		);
 	}

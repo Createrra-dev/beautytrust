@@ -45,4 +45,14 @@ class MasterServicesData {
 			price: 4200,
 		),
 	];
+
+	static MasterService? findByName(String name) {
+		for (final service in services) {
+			if (service.name == name) {
+				return service;
+			}
+		}
+
+		return null;
+	}
 }

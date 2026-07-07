@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../utils/phone_formatter.dart';
+import 'visit_result.dart';
+
 enum AppointmentRiskLevel {
 	low,
 	medium,
@@ -7,29 +10,70 @@ enum AppointmentRiskLevel {
 }
 
 class AppointmentRecord {
-	const AppointmentRecord({
+	AppointmentRecord({
 		required this.id,
 		required this.clientName,
+		required this.clientPhoneDigits,
 		required this.serviceName,
 		required this.serviceDurationLabel,
-		required this.timeLabel,
-		required this.dateLabel,
+		required this.scheduledAt,
 		required this.servicePrice,
 		required this.clientRating,
 		required this.riskLevel,
 		required this.daysSinceVerified,
+		this.visitResult,
 	});
 
 	final String id;
 	final String clientName;
+	final String clientPhoneDigits;
 	final String serviceName;
 	final String serviceDurationLabel;
-	final String timeLabel;
-	final String dateLabel;
+	final DateTime scheduledAt;
 	final int servicePrice;
 	final double clientRating;
 	final AppointmentRiskLevel riskLevel;
 	final int daysSinceVerified;
+	final VisitResult? visitResult;
+
+	String get dateLabel => formatAppointmentDateLabel(scheduledAt);
+
+	String get timeLabel => formatAppointmentTimeLabel(scheduledAt);
+
+	String get phoneDisplay {
+		if (clientPhoneDigits.length != 10) {
+			return clientPhoneDigits;
+		}
+
+		return formatPhoneDisplay(clientPhoneDigits);
+	}
+
+	AppointmentRecord copyWith({
+		String? clientName,
+		String? clientPhoneDigits,
+		String? serviceName,
+		String? serviceDurationLabel,
+		DateTime? scheduledAt,
+		int? servicePrice,
+		double? clientRating,
+		AppointmentRiskLevel? riskLevel,
+		int? daysSinceVerified,
+		VisitResult? visitResult,
+	}) {
+		return AppointmentRecord(
+			id: id,
+			clientName: clientName ?? this.clientName,
+			clientPhoneDigits: clientPhoneDigits ?? this.clientPhoneDigits,
+			serviceName: serviceName ?? this.serviceName,
+			serviceDurationLabel: serviceDurationLabel ?? this.serviceDurationLabel,
+			scheduledAt: scheduledAt ?? this.scheduledAt,
+			servicePrice: servicePrice ?? this.servicePrice,
+			clientRating: clientRating ?? this.clientRating,
+			riskLevel: riskLevel ?? this.riskLevel,
+			daysSinceVerified: daysSinceVerified ?? this.daysSinceVerified,
+			visitResult: visitResult ?? this.visitResult,
+		);
+	}
 
 	String get riskLabel {
 		return switch (riskLevel) {

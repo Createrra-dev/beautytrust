@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../models/tariff_payment_summary.dart';
 import '../../models/tariff_plan.dart';
 import 'master_profile_screen.dart';
+import '../support/create_support_ticket_screen.dart';
+import '../support/support_chat_screen.dart';
+import '../support/support_tickets_screen.dart';
 import 'tariff_payment_screen.dart';
 import 'tariff_success_screen.dart';
 import 'tariffs_screen.dart';
@@ -32,6 +35,23 @@ class ProfileTabNavigator extends StatelessWidget {
 							settings: settings,
 							builder: (context) => TariffSuccessScreen(
 								summary: settings.arguments! as TariffPaymentSummary,
+							),
+						);
+					case SupportTicketsScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => const SupportTicketsScreen(),
+						);
+					case CreateSupportTicketScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => const CreateSupportTicketScreen(),
+						);
+					case SupportChatScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => SupportChatScreen(
+								ticketId: settings.arguments! as String,
 							),
 						);
 					default:
