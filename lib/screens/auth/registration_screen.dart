@@ -19,7 +19,6 @@ class RegistrationScreen extends StatefulWidget {
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
 	final _firstNameController = TextEditingController(text: 'Анна');
-	final _lastNameController = TextEditingController(text: 'Петрова');
 	final _phoneController = TextEditingController(text: '9991234567');
 	final _emailController = TextEditingController(text: 'anna.petrova@mail.ru');
 	final _passwordController = TextEditingController(text: 'Beauty123');
@@ -37,7 +36,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 	@override
 	void dispose() {
 		_firstNameController.dispose();
-		_lastNameController.dispose();
 		_phoneController.dispose();
 		_emailController.dispose();
 		_passwordController.dispose();
@@ -48,7 +46,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 	bool get _canRegister {
 		final password = _passwordController.text;
 		return _firstNameController.text.trim().isNotEmpty &&
-			_lastNameController.text.trim().isNotEmpty &&
 			isPhoneComplete(_phoneController.text) &&
 			PasswordRequirements.isValid(password) &&
 			password == _confirmPasswordController.text;
@@ -82,7 +79,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 			body: ListenableBuilder(
 				listenable: Listenable.merge([
 					_firstNameController,
-					_lastNameController,
 					_phoneController,
 					_emailController,
 					_passwordController,
@@ -119,12 +115,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 									label: 'Имя',
 									controller: _firstNameController,
 									hintText: 'Анна',
-								),
-								const SizedBox(height: 16),
-								AppTextField(
-									label: 'Фамилия',
-									controller: _lastNameController,
-									hintText: 'Петрова',
 								),
 								const SizedBox(height: 16),
 								PhoneTextField(controller: _phoneController),
