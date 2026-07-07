@@ -16,9 +16,9 @@ class AppBottomNavigation extends StatelessWidget {
 
 	static const tabLabels = [
 		'Проверка',
-		'История',
-		'Home',
 		'Сообщество',
+		'Home',
+		'История',
 		'Профиль',
 	];
 
@@ -38,9 +38,9 @@ class AppBottomNavigation extends StatelessWidget {
 				labels: tabLabels,
 				icons: const [
 					Icons.verified_user_outlined,
-					Icons.schedule_outlined,
-					Icons.home_outlined,
 					Icons.people_outline_rounded,
+					Icons.home_outlined,
+					Icons.schedule_outlined,
 					Icons.person_outline_rounded,
 				],
 				tabBarColor: AppColors.background,

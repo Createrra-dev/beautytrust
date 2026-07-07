@@ -44,9 +44,9 @@ class _MainShellScreenState extends State<MainShellScreen>
 					controller: _motionTabBarController,
 					children: const [
 						CheckTabNavigator(),
-						HistoryTabNavigator(),
-						HomeTabNavigator(),
 						_PlaceholderTab(title: 'Сообщество'),
+						HomeTabNavigator(),
+						HistoryTabNavigator(),
 						_PlaceholderTab(title: 'Профиль'),
 					],
 				),

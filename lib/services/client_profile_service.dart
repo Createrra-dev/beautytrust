@@ -135,15 +135,15 @@ class ClientProfileService {
 
 	static final Map<String, ClientCheckResult> _checksByPhoneDigits = {
 		'9991234567': ClientCheckResult(
-			clientName: 'Екатерина Смирнова',
+			clientName: 'Екатерина',
 			profile: _profilesById['3']!,
 		),
 		'9992345678': ClientCheckResult(
-			clientName: 'Анна Петрова',
+			clientName: 'Анна',
 			profile: _profilesById['1']!,
 		),
 		'9998765432': ClientCheckResult(
-			clientName: 'Ирина Соколова',
+			clientName: 'Ирина',
 			profile: _profilesById['9']!,
 		),
 		'9165551234': ClientCheckResult(

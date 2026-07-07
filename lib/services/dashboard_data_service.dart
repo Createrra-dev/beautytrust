@@ -37,7 +37,7 @@ class DashboardDataService {
 		return const [
 			AppointmentRecord(
 				id: '1',
-				clientName: 'Анна Петрова',
+				clientName: 'Анна',
 				serviceName: 'Маникюр + покрытие',
 				serviceDurationLabel: '2 ч',
 				timeLabel: '10:00',
@@ -49,7 +49,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '2',
-				clientName: 'Мария Иванова',
+				clientName: 'Мария',
 				serviceName: 'Стрижка и укладка',
 				serviceDurationLabel: '1,5 ч',
 				timeLabel: '14:00',
@@ -61,7 +61,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '3',
-				clientName: 'Екатерина Смирнова',
+				clientName: 'Екатерина',
 				serviceName: 'Окрашивание',
 				serviceDurationLabel: '3 ч',
 				timeLabel: '11:00',
@@ -73,7 +73,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '4',
-				clientName: 'Ольга Кузнецова',
+				clientName: 'Ольга',
 				serviceName: 'Педикюр',
 				serviceDurationLabel: '1,5 ч',
 				timeLabel: '15:30',
@@ -85,7 +85,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '5',
-				clientName: 'Дарья Волкова',
+				clientName: 'Дарья',
 				serviceName: 'Брови + ламинирование',
 				serviceDurationLabel: '1 ч',
 				timeLabel: '18:00',
@@ -97,7 +97,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '6',
-				clientName: 'Виктория Морозова',
+				clientName: 'Виктория',
 				serviceName: 'Кератиновое выпрямление',
 				serviceDurationLabel: '4 ч',
 				timeLabel: '12:00',
@@ -109,7 +109,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '7',
-				clientName: 'Наталья Белова',
+				clientName: 'Наталья',
 				serviceName: 'Макияж',
 				serviceDurationLabel: '1,5 ч',
 				timeLabel: '09:30',
@@ -121,7 +121,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '8',
-				clientName: 'Светлана Орлова',
+				clientName: 'Светлана',
 				serviceName: 'Наращивание ресниц',
 				serviceDurationLabel: '2,5 ч',
 				timeLabel: '16:00',
@@ -133,7 +133,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '9',
-				clientName: 'Ирина Соколова',
+				clientName: 'Ирина',
 				serviceName: 'Химическая завивка',
 				serviceDurationLabel: '3,5 ч',
 				timeLabel: '13:00',
@@ -145,7 +145,7 @@ class DashboardDataService {
 			),
 			AppointmentRecord(
 				id: '10',
-				clientName: 'Юлия Фёдорова',
+				clientName: 'Юлия',
 				serviceName: 'SPA-уход для лица',
 				serviceDurationLabel: '1,5 ч',
 				timeLabel: '17:30',
