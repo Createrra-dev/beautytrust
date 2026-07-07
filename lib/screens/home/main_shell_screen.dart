@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
-import 'home_screen.dart';
+import 'profile_tab_navigator.dart';
 
 class MainShellScreen extends StatefulWidget {
 	const MainShellScreen({super.key});
@@ -33,7 +33,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
 			AppTab.check => const _PlaceholderTab(title: 'Проверка'),
 			AppTab.history => const _PlaceholderTab(title: 'История'),
 			AppTab.community => const _PlaceholderTab(title: 'Сообщество'),
-			AppTab.profile => const HomeScreen(),
+			AppTab.profile => const ProfileTabNavigator(),
 		};
 	}
 }

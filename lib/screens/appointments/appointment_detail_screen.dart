@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../models/appointment_record.dart';
+import '../../models/client_profile.dart';
+import '../../services/client_profile_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/auth/auth_scaffold.dart';
 
 class AppointmentDetailScreen extends StatelessWidget {
 	const AppointmentDetailScreen({
@@ -10,91 +11,559 @@ class AppointmentDetailScreen extends StatelessWidget {
 		required this.appointment,
 	});
 
+	static const routeName = '/appointment-detail';
+
 	final AppointmentRecord appointment;
 
 	@override
 	Widget build(BuildContext context) {
-		final ratingColor = appointmentRatingColor(appointment.clientRating);
-		final riskColor = appointmentRiskColor(appointment.riskLevel);
+		final profile = ClientProfileService.profileFor(appointment);
+		final ratingColor = appointmentRatingColor(profile.reviewsAverage);
 
-		return AuthScaffold(
-			showBackButton: true,
-			body: SingleChildScrollView(
-				padding: const EdgeInsets.symmetric(horizontal: 24),
-				child: Column(
-					crossAxisAlignment: CrossAxisAlignment.start,
-					children: [
-						const SizedBox(height: 8),
-						Text(
-							appointment.clientName,
-							style: const TextStyle(
-								color: AppColors.textPrimary,
-								fontSize: 28,
-								fontWeight: FontWeight.w700,
+		return SafeArea(
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.stretch,
+				children: [
+					_PageHeader(
+						title: 'Детали записи',
+						onBack: () => Navigator.of(context).pop(),
+					),
+					Expanded(
+						child: SingleChildScrollView(
+							padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+							child: Container(
+								padding: const EdgeInsets.all(16),
+								decoration: BoxDecoration(
+									color: AppColors.surface,
+									borderRadius: BorderRadius.circular(16),
+									border: Border.all(color: AppColors.border),
+								),
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.stretch,
+									children: [
+										_AppointmentSummary(appointment: appointment),
+										const SizedBox(height: 16),
+										_ClientHeader(
+											appointment: appointment,
+											profile: profile,
+											ratingColor: ratingColor,
+										),
+										const SizedBox(height: 16),
+										_StatsRow(profile: profile, ratingColor: ratingColor),
+										const SizedBox(height: 16),
+										const Divider(color: AppColors.border, height: 1),
+										const SizedBox(height: 16),
+										_ReviewsSection(reviews: profile.reviews),
+										const SizedBox(height: 16),
+										_ReliabilityBanner(
+											profile: profile,
+											ratingColor: ratingColor,
+										),
+									],
+								),
 							),
 						),
-						const SizedBox(height: 8),
-						Text(
-							'${appointment.dateLabel}, ${appointment.timeLabel}',
-							style: const TextStyle(
-								color: AppColors.textMuted,
-								fontSize: 15,
-							),
-						),
-						const SizedBox(height: 24),
-						_buildInfoRow('Услуга', appointment.serviceName),
-						const SizedBox(height: 12),
-						_buildInfoRow('Стоимость', formatServicePrice(appointment.servicePrice)),
-						const SizedBox(height: 12),
-						_buildInfoRow(
-							'Рейтинг клиента',
-							formatAppointmentRating(appointment.clientRating),
-							valueColor: ratingColor,
-						),
-						const SizedBox(height: 12),
-						_buildInfoRow(
-							'Риск неявки',
-							appointment.riskLabel,
-							valueColor: riskColor,
-						),
-						const SizedBox(height: 12),
-						_buildInfoRow('Последняя проверка', appointment.verifiedLabel),
-					],
-				),
+					),
+				],
 			),
 		);
 	}
+}
 
-	Widget _buildInfoRow(
-		String label,
-		String value, {
-		Color? valueColor,
-	}) {
-		return Container(
-			width: double.infinity,
-			padding: const EdgeInsets.all(16),
-			decoration: BoxDecoration(
-				color: AppColors.surface,
-				borderRadius: BorderRadius.circular(12),
-				border: Border.all(color: AppColors.border),
-			),
-			child: Column(
-				crossAxisAlignment: CrossAxisAlignment.start,
+class _PageHeader extends StatelessWidget {
+	const _PageHeader({
+		required this.title,
+		required this.onBack,
+	});
+
+	final String title;
+	final VoidCallback onBack;
+
+	@override
+	Widget build(BuildContext context) {
+		return Padding(
+			padding: const EdgeInsets.fromLTRB(8, 4, 16, 8),
+			child: Row(
 				children: [
-					Text(
-						label,
-						style: const TextStyle(
-							color: AppColors.textMuted,
-							fontSize: 13,
+					IconButton(
+						onPressed: onBack,
+						icon: const Icon(
+							Icons.arrow_back_ios_new_rounded,
+							color: AppColors.textPrimary,
+							size: 20,
 						),
 					),
-					const SizedBox(height: 6),
-					Text(
-						value,
-						style: TextStyle(
-							color: valueColor ?? AppColors.textPrimary,
-							fontSize: 16,
+					Expanded(
+						child: Text(
+							title,
+							style: const TextStyle(
+								color: AppColors.textPrimary,
+								fontSize: 18,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					),
+				],
+			),
+		);
+	}
+}
+
+class _AppointmentSummary extends StatelessWidget {
+	const _AppointmentSummary({required this.appointment});
+
+	final AppointmentRecord appointment;
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			padding: const EdgeInsets.all(12),
+			decoration: BoxDecoration(
+				color: AppColors.surfaceElevated,
+				borderRadius: BorderRadius.circular(12),
+			),
+			child: Row(
+				children: [
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								Text(
+									appointment.serviceName,
+									style: const TextStyle(
+										color: AppColors.textPrimary,
+										fontSize: 15,
+										fontWeight: FontWeight.w600,
+									),
+								),
+								const SizedBox(height: 4),
+								Text(
+									'${appointment.dateLabel}, ${appointment.timeLabel} · ${appointment.priceLineLabel}',
+									style: const TextStyle(
+										color: AppColors.textMuted,
+										fontSize: 12,
+									),
+								),
+							],
+						),
+					),
+					Container(
+						padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+						decoration: BoxDecoration(
+							color: appointmentRiskColor(appointment.riskLevel)
+								.withValues(alpha: 0.12),
+							borderRadius: BorderRadius.circular(8),
+							border: Border.all(
+								color: appointmentRiskColor(appointment.riskLevel)
+									.withValues(alpha: 0.4),
+							),
+						),
+						child: Text(
+							appointment.riskLabel,
+							style: TextStyle(
+								color: appointmentRiskColor(appointment.riskLevel),
+								fontSize: 11,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					),
+				],
+			),
+		);
+	}
+}
+
+class _ClientHeader extends StatelessWidget {
+	const _ClientHeader({
+		required this.appointment,
+		required this.profile,
+		required this.ratingColor,
+	});
+
+	final AppointmentRecord appointment;
+	final ClientProfile profile;
+	final Color ratingColor;
+
+	@override
+	Widget build(BuildContext context) {
+		final initials = _initials(appointment.clientName);
+
+		return Row(
+			crossAxisAlignment: CrossAxisAlignment.start,
+			children: [
+				CircleAvatar(
+					radius: 28,
+					backgroundColor: AppColors.surfaceElevated,
+					child: Text(
+						initials,
+						style: const TextStyle(
+							color: AppColors.textPrimary,
+							fontSize: 18,
 							fontWeight: FontWeight.w600,
+						),
+					),
+				),
+				const SizedBox(width: 12),
+				Expanded(
+					child: Column(
+						crossAxisAlignment: CrossAxisAlignment.start,
+						children: [
+							Text(
+								appointment.clientName,
+								style: const TextStyle(
+									color: AppColors.textPrimary,
+									fontSize: 18,
+									fontWeight: FontWeight.w700,
+								),
+							),
+							const SizedBox(height: 4),
+							Text(
+								profile.phone,
+								style: const TextStyle(
+									color: AppColors.textMuted,
+									fontSize: 14,
+								),
+							),
+						],
+					),
+				),
+				Column(
+					crossAxisAlignment: CrossAxisAlignment.end,
+					children: [
+						Text(
+							formatAppointmentRating(profile.reviewsAverage),
+							style: TextStyle(
+								color: ratingColor,
+								fontSize: 28,
+								fontWeight: FontWeight.w700,
+								height: 1,
+							),
+						),
+						const SizedBox(height: 4),
+						Text(
+							profile.ratingLabel,
+							style: TextStyle(
+								color: ratingColor,
+								fontSize: 13,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					],
+				),
+			],
+		);
+	}
+
+	String _initials(String name) {
+		final parts = name.trim().split(RegExp(r'\s+'));
+		if (parts.length == 1) {
+			return parts.first.substring(0, 1).toUpperCase();
+		}
+
+		return '${parts.first.substring(0, 1)}${parts[1].substring(0, 1)}'.toUpperCase();
+	}
+}
+
+class _StatsRow extends StatelessWidget {
+	const _StatsRow({
+		required this.profile,
+		required this.ratingColor,
+	});
+
+	final ClientProfile profile;
+	final Color ratingColor;
+
+	@override
+	Widget build(BuildContext context) {
+		return IntrinsicHeight(
+			child: Row(
+				children: [
+					Expanded(
+						child: _StatTile(
+							title: 'Отзывы мастеров',
+							icon: Icons.star_rounded,
+							iconColor: ratingColor,
+							value: '${formatAppointmentRating(profile.reviewsAverage)}/5',
+							subtitle: '${profile.reviewsCount} отзыва',
+						),
+					),
+					const _VerticalDivider(),
+					Expanded(
+						child: _StatTile(
+							title: 'Неявки',
+							icon: Icons.event_busy_outlined,
+							iconColor: AppColors.primary,
+							value: '${profile.noShowsCount}',
+							subtitle: 'за 6 мес.',
+						),
+					),
+					const _VerticalDivider(),
+					Expanded(
+						child: _StatTile(
+							title: 'Скандалы',
+							icon: Icons.star_outline_rounded,
+							iconColor: AppColors.primary,
+							value: '${profile.scandalsCount}',
+							subtitle: 'за 6 мес.',
+						),
+					),
+				],
+			),
+		);
+	}
+}
+
+class _VerticalDivider extends StatelessWidget {
+	const _VerticalDivider();
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			width: 1,
+			margin: const EdgeInsets.symmetric(horizontal: 8),
+			color: AppColors.border,
+		);
+	}
+}
+
+class _StatTile extends StatelessWidget {
+	const _StatTile({
+		required this.title,
+		required this.icon,
+		required this.iconColor,
+		required this.value,
+		required this.subtitle,
+	});
+
+	final String title;
+	final IconData icon;
+	final Color iconColor;
+	final String value;
+	final String subtitle;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.start,
+			children: [
+				Text(
+					title,
+					style: const TextStyle(
+						color: AppColors.textMuted,
+						fontSize: 11,
+						height: 1.2,
+					),
+				),
+				const SizedBox(height: 8),
+				Row(
+					children: [
+						Icon(icon, size: 16, color: iconColor),
+						const SizedBox(width: 4),
+						Flexible(
+							child: Text(
+								value,
+								style: const TextStyle(
+									color: AppColors.textPrimary,
+									fontSize: 15,
+									fontWeight: FontWeight.w700,
+								),
+							),
+						),
+					],
+				),
+				const SizedBox(height: 4),
+				Text(
+					subtitle,
+					style: const TextStyle(
+						color: AppColors.textMuted,
+						fontSize: 11,
+					),
+				),
+			],
+		);
+	}
+}
+
+class _ReviewsSection extends StatelessWidget {
+	const _ReviewsSection({required this.reviews});
+
+	final List<MasterReview> reviews;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.stretch,
+			children: [
+				const Row(
+					children: [
+						Expanded(
+							child: Text(
+								'Что говорят мастера',
+								style: TextStyle(
+									color: AppColors.textPrimary,
+									fontSize: 16,
+									fontWeight: FontWeight.w600,
+								),
+							),
+						),
+						Text(
+							'Смотреть все',
+							style: TextStyle(
+								color: AppColors.primary,
+								fontSize: 13,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					],
+				),
+				const SizedBox(height: 12),
+				...reviews.map(
+					(review) => Padding(
+						padding: const EdgeInsets.only(bottom: 12),
+						child: _ReviewItem(review: review),
+					),
+				),
+			],
+		);
+	}
+}
+
+class _ReviewItem extends StatelessWidget {
+	const _ReviewItem({required this.review});
+
+	final MasterReview review;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.start,
+			children: [
+				Row(
+					children: [
+						CircleAvatar(
+							radius: 14,
+							backgroundColor: AppColors.surfaceElevated,
+							child: Text(
+								review.masterName.substring(0, 1),
+								style: const TextStyle(
+									color: AppColors.textPrimary,
+									fontSize: 11,
+									fontWeight: FontWeight.w600,
+								),
+							),
+						),
+						const SizedBox(width: 8),
+						Expanded(
+							child: Text(
+								review.masterName,
+								style: const TextStyle(
+									color: AppColors.textPrimary,
+									fontSize: 14,
+									fontWeight: FontWeight.w600,
+								),
+							),
+						),
+						_StarRating(rating: review.rating),
+					],
+				),
+				const SizedBox(height: 8),
+				Text(
+					review.text,
+					style: const TextStyle(
+						color: AppColors.textMuted,
+						fontSize: 13,
+						height: 1.4,
+					),
+				),
+				const SizedBox(height: 8),
+				Container(
+					padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+					decoration: BoxDecoration(
+						color: AppColors.surfaceElevated,
+						borderRadius: BorderRadius.circular(8),
+					),
+					child: Text(
+						review.tag,
+						style: const TextStyle(
+							color: AppColors.textMuted,
+							fontSize: 11,
+						),
+					),
+				),
+			],
+		);
+	}
+}
+
+class _StarRating extends StatelessWidget {
+	const _StarRating({required this.rating});
+
+	final int rating;
+
+	@override
+	Widget build(BuildContext context) {
+		return Row(
+			mainAxisSize: MainAxisSize.min,
+			children: List.generate(5, (index) {
+				final isFilled = index < rating;
+
+				return Icon(
+					isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
+					size: 14,
+					color: isFilled ? AppColors.primary : AppColors.textMuted,
+				);
+			}),
+		);
+	}
+}
+
+class _ReliabilityBanner extends StatelessWidget {
+	const _ReliabilityBanner({
+		required this.profile,
+		required this.ratingColor,
+	});
+
+	final ClientProfile profile;
+	final Color ratingColor;
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			padding: const EdgeInsets.all(14),
+			decoration: BoxDecoration(
+				color: ratingColor.withValues(alpha: 0.08),
+				borderRadius: BorderRadius.circular(12),
+				border: Border.all(color: ratingColor.withValues(alpha: 0.25)),
+			),
+			child: Row(
+				children: [
+					Icon(
+						Icons.verified_user_outlined,
+						color: ratingColor,
+						size: 22,
+					),
+					const SizedBox(width: 12),
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								Text(
+									profile.reliabilityTitle,
+									style: TextStyle(
+										color: ratingColor,
+										fontSize: 14,
+										fontWeight: FontWeight.w700,
+									),
+								),
+								const SizedBox(height: 2),
+								Text(
+									profile.reliabilitySubtitle,
+									style: const TextStyle(
+										color: AppColors.textMuted,
+										fontSize: 12,
+									),
+								),
+							],
 						),
 					),
 				],

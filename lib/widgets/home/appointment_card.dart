@@ -101,10 +101,9 @@ class AppointmentCard extends StatelessWidget {
 	}
 
 	void _openDetails(BuildContext context) {
-		Navigator.of(context).push(
-			MaterialPageRoute(
-				builder: (context) => AppointmentDetailScreen(appointment: appointment),
-			),
+		Navigator.of(context).pushNamed(
+			AppointmentDetailScreen.routeName,
+			arguments: appointment,
 		);
 	}
 }
