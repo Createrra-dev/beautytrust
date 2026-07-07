@@ -58,7 +58,7 @@ class AppointmentDetailScreen extends StatelessWidget {
 							valueColor: riskColor,
 						),
 						const SizedBox(height: 12),
-						_buildInfoRow('Последняя проверка', appointment.lastCheckedLabel),
+						_buildInfoRow('Последняя проверка', appointment.verifiedLabel),
 					],
 				),
 			),

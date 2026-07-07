@@ -6,34 +6,30 @@ enum AppointmentRiskLevel {
 	high,
 }
 
-enum AppointmentLastChecked {
-	today,
-	oneDayAgo,
-	threeDaysAgo,
-}
-
 class AppointmentRecord {
 	const AppointmentRecord({
 		required this.id,
 		required this.clientName,
 		required this.serviceName,
+		required this.serviceDurationLabel,
 		required this.timeLabel,
 		required this.dateLabel,
 		required this.servicePrice,
 		required this.clientRating,
 		required this.riskLevel,
-		required this.lastChecked,
+		required this.daysSinceVerified,
 	});
 
 	final String id;
 	final String clientName;
 	final String serviceName;
+	final String serviceDurationLabel;
 	final String timeLabel;
 	final String dateLabel;
 	final int servicePrice;
 	final double clientRating;
 	final AppointmentRiskLevel riskLevel;
-	final AppointmentLastChecked lastChecked;
+	final int daysSinceVerified;
 
 	String get riskLabel {
 		return switch (riskLevel) {
@@ -43,12 +39,16 @@ class AppointmentRecord {
 		};
 	}
 
-	String get lastCheckedLabel {
-		return switch (lastChecked) {
-			AppointmentLastChecked.today => 'Сегодня',
-			AppointmentLastChecked.oneDayAgo => '1 день назад',
-			AppointmentLastChecked.threeDaysAgo => '3 дня назад',
-		};
+	String get verifiedLabel {
+		if (daysSinceVerified <= 0) {
+			return 'Проверен сегодня';
+		}
+
+		return 'Проверен $daysSinceVerified дн. назад';
+	}
+
+	String get priceLineLabel {
+		return '$serviceDurationLabel • ${formatServicePrice(servicePrice)}';
 	}
 }
 

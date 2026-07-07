@@ -39,7 +39,7 @@ class CurrentAppointmentsSection extends StatelessWidget {
 				const SizedBox(height: 12),
 				...appointments.map(
 					(appointment) => Padding(
-						padding: const EdgeInsets.only(bottom: 10),
+						padding: const EdgeInsets.only(bottom: 8),
 						child: AppointmentCard(appointment: appointment),
 					),
 				),
