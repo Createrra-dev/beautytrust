@@ -27,8 +27,7 @@ class _CommunityChatScreenState extends State<CommunityChatScreen> {
 	void initState() {
 		super.initState();
 		_communityService.addListener(_onCommunityChanged);
-		_communityService.markTopicRead(widget.topicId);
-		_scrollToBottom();
+		_communityService.loadMessages(widget.topicId);
 	}
 
 	@override
@@ -43,8 +42,8 @@ class _CommunityChatScreenState extends State<CommunityChatScreen> {
 		setState(() {});
 	}
 
-	void _sendMessage() {
-		final message = _communityService.sendMessage(
+	void _sendMessage() async {
+		final message = await _communityService.sendMessage(
 			topicId: widget.topicId,
 			text: _messageController.text,
 		);

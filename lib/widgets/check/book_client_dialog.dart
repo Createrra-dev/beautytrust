@@ -89,7 +89,7 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 		setState(() => _selectedTime = pickedTime);
 	}
 
-	void _bookClient() {
+	void _bookClient() async {
 		final clientName = _nameController.text.trim();
 		final service = _selectedService;
 
@@ -116,9 +116,9 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 
 		final phoneDigits = extractPhoneDigits(profile.phone);
 
-		DashboardDataService.addAppointment(
+		await DashboardDataService.addAppointment(
 			AppointmentRecord(
-				id: DashboardDataService.nextAppointmentId(),
+				id: 'pending',
 				clientName: clientName,
 				clientPhoneDigits: phoneDigits,
 				serviceName: service.name,

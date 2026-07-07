@@ -46,7 +46,7 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 		super.dispose();
 	}
 
-	void _save() {
+	void _save() async {
 		final punctuality = _punctuality;
 		final paidInFull = _paidInFull;
 		final hadScandal = _hadScandal;
@@ -83,7 +83,7 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 			comment: comment.isEmpty ? null : comment,
 		);
 
-		DashboardDataService.saveVisitResult(widget.appointment.id, visitResult);
+		await DashboardDataService.saveVisitResult(widget.appointment.id, visitResult);
 		Navigator.of(context).pop(true);
 	}
 

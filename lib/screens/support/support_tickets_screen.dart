@@ -25,6 +25,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
 		super.initState();
 		_supportService.addListener(_onSupportChanged);
 		_searchController.addListener(_onSearchChanged);
+		_supportService.syncFromApi();
 	}
 
 	@override
@@ -41,6 +42,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
 
 	void _onSearchChanged() {
 		setState(() => _searchQuery = _searchController.text);
+		_supportService.syncFromApi(query: _searchQuery);
 	}
 
 	void _openCreateTicket() {

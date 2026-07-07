@@ -30,8 +30,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 	void initState() {
 		super.initState();
 		_supportService.addListener(_onSupportChanged);
-		_supportService.markTicketRead(widget.ticketId);
-		_scrollToBottom();
+		_supportService.loadMessages(widget.ticketId);
 	}
 
 	@override
@@ -47,8 +46,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 		_scrollToBottom();
 	}
 
-	void _sendMessage() {
-		final message = _supportService.sendMessage(
+	void _sendMessage() async {
+		final message = await _supportService.sendMessage(
 			ticketId: widget.ticketId,
 			text: _messageController.text,
 		);
@@ -61,8 +60,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 		_scrollToBottom();
 	}
 
-	void _cancelTicket() {
-		final cancelled = _supportService.cancelTicket(widget.ticketId);
+	void _cancelTicket() async {
+		final cancelled = await _supportService.cancelTicket(widget.ticketId);
 		if (!mounted || !cancelled) {
 			return;
 		}

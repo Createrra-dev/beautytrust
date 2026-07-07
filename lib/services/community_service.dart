@@ -1,29 +1,23 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/demo_community_data.dart';
 import '../models/community_message.dart';
 import '../models/community_topic.dart';
+import 'api/app_api_repository.dart';
 
 class CommunityService extends ChangeNotifier {
-	CommunityService._() {
-		_resetFromDemo();
-	}
+	CommunityService._();
 
 	static final CommunityService instance = CommunityService._();
+	static final AppApiRepository _api = AppApiRepository();
 
 	final List<CommunityTopic> _topics = [];
 	final Map<String, List<CommunityMessage>> _messagesByTopic = {};
-	var _nextTopicId = 100;
-	var _nextMessageId = 1000;
 
-	void _resetFromDemo({DateTime? referenceNow}) {
+	Future<void> syncFromApi({String query = ''}) async {
 		_topics
 			..clear()
-			..addAll(DemoCommunityData.topics(referenceNow: referenceNow));
-
-		_messagesByTopic
-			..clear()
-			..addAll(DemoCommunityData.messagesByTopic(referenceNow: referenceNow));
+			..addAll(await _api.fetchCommunityTopics(query: query));
+		notifyListeners();
 	}
 
 	List<CommunityTopic> topicsFor(String query) {
@@ -33,7 +27,6 @@ class CommunityService extends ChangeNotifier {
 				if (left.isPinned != right.isPinned) {
 					return left.isPinned ? -1 : 1;
 				}
-
 				return right.lastMessageAt.compareTo(left.lastMessageAt);
 			});
 
@@ -49,9 +42,7 @@ class CommunityService extends ChangeNotifier {
 	}
 
 	List<CommunityMessage> messagesForTopic(String topicId) {
-		return List<CommunityMessage>.from(
-			_messagesByTopic[topicId] ?? const [],
-		);
+		return List<CommunityMessage>.from(_messagesByTopic[topicId] ?? const []);
 	}
 
 	CommunityTopic? topicById(String topicId) {
@@ -60,84 +51,57 @@ class CommunityService extends ChangeNotifier {
 				return topic;
 			}
 		}
-
 		return null;
 	}
 
-	CommunityTopic createTopic({
+	Future<CommunityTopic> createTopic({
 		required String title,
 		required String story,
-	}) {
-		final now = DateTime.now();
-		final topicId = 'topic-$_nextTopicId';
-		_nextTopicId += 1;
-
-		final messageId = 'm-$_nextMessageId';
-		_nextMessageId += 1;
-
-		final topic = CommunityTopic(
-			id: topicId,
-			title: title.trim(),
-			authorName: DemoCommunityData.currentUserName,
-			createdAt: now,
-			participantCount: 1,
-			lastMessage: story.trim(),
-			lastMessageAt: now,
-			participantInitials: ['А'],
-			emoji: '✨',
-		);
-
-		final message = CommunityMessage(
-			id: messageId,
-			topicId: topicId,
-			authorName: DemoCommunityData.currentUserName,
-			text: story.trim(),
-			sentAt: now,
-			isMine: true,
-		);
-
+	}) async {
+		final topic = await _api.createCommunityTopic(title: title, story: story);
 		_topics.insert(0, topic);
-		_messagesByTopic[topicId] = [message];
+		_messagesByTopic[topic.id] = [
+			CommunityMessage(
+				id: 'local-${topic.id}',
+				topicId: topic.id,
+				authorName: topic.authorName,
+				text: story.trim(),
+				sentAt: topic.lastMessageAt,
+				isMine: true,
+			),
+		];
 		notifyListeners();
 		return topic;
 	}
 
-	CommunityMessage? sendMessage({
+	Future<void> loadMessages(String topicId) async {
+		_messagesByTopic[topicId] = await _api.fetchCommunityMessages(topicId);
+		markTopicRead(topicId);
+		notifyListeners();
+	}
+
+	Future<CommunityMessage?> sendMessage({
 		required String topicId,
 		required String text,
-	}) {
+	}) async {
 		final trimmedText = text.trim();
 		if (trimmedText.isEmpty) {
 			return null;
 		}
 
-		final topicIndex = _topics.indexWhere((topic) => topic.id == topicId);
-		if (topicIndex < 0) {
-			return null;
-		}
-
-		final now = DateTime.now();
-		final messageId = 'm-$_nextMessageId';
-		_nextMessageId += 1;
-
-		final message = CommunityMessage(
-			id: messageId,
-			topicId: topicId,
-			authorName: DemoCommunityData.currentUserName,
-			text: trimmedText,
-			sentAt: now,
-			isMine: true,
-		);
-
+		final message = await _api.sendCommunityMessage(topicId: topicId, text: trimmedText);
 		final messages = _messagesByTopic.putIfAbsent(topicId, () => []);
 		messages.add(message);
 
-		final topic = _topics[topicIndex];
-		_topics[topicIndex] = topic.copyWith(
-			lastMessage: trimmedText,
-			lastMessageAt: now,
-			unreadCount: 0,
-		);
+		final topicIndex = _topics.indexWhere((topic) => topic.id == topicId);
+		if (topicIndex >= 0) {
+			final topic = _topics[topicIndex];
+			_topics[topicIndex] = topic.copyWith(
+				lastMessage: trimmedText,
+				lastMessageAt: message.sentAt,
+				unreadCount: 0,
+			);
+		}
 
 		notifyListeners();
 		return message;

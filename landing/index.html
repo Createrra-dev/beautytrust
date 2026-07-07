@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Beauty Trust — сообщество мастеров красоты</title>
+	<meta name="description" content="Beauty Trust помогает мастерам проверять клиентов, защищать доход и делиться опытом.">
+	<style>
+		:root {
+			--bg: #121217;
+			--surface: #1e1e26;
+			--primary: #8a4fff;
+			--secondary: #34d399;
+			--text: #ffffff;
+			--muted: #9ca3af;
+			--border: #2f2f3a;
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			background: radial-gradient(circle at top left, rgba(138,79,255,.18), transparent 35%),
+				radial-gradient(circle at bottom right, rgba(52,211,153,.12), transparent 30%),
+				var(--bg);
+			color: var(--text);
+			line-height: 1.6;
+		}
+		.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+		header { padding: 28px 0; }
+		.logo { font-size: 24px; font-weight: 700; }
+		.logo span { color: var(--secondary); }
+		.hero { padding: 56px 0 72px; display: grid; grid-template-columns: 1.2fr .8fr; gap: 40px; align-items: center; }
+		.badge {
+			display: inline-block;
+			padding: 6px 12px;
+			border-radius: 999px;
+			background: rgba(52,211,153,.12);
+			border: 1px solid rgba(52,211,153,.35);
+			color: var(--secondary);
+			font-size: 13px;
+			font-weight: 600;
+			margin-bottom: 16px;
+		}
+		h1 { font-size: clamp(36px, 6vw, 56px); line-height: 1.05; margin: 0 0 20px; }
+		.lead { color: var(--muted); font-size: 18px; max-width: 560px; }
+		.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+		.btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 14px 22px;
+			border-radius: 12px;
+			font-weight: 600;
+			text-decoration: none;
+		}
+		.btn-primary { background: var(--primary); color: #fff; }
+		.btn-secondary { border: 1px solid var(--border); color: #fff; background: var(--surface); }
+		.phone {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 28px;
+			padding: 24px;
+			box-shadow: 0 30px 80px rgba(0,0,0,.35);
+		}
+		.phone-top { height: 10px; width: 120px; background: #2a2a35; border-radius: 999px; margin: 0 auto 20px; }
+		.card {
+			background: #26262f;
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 16px;
+			margin-bottom: 12px;
+		}
+		.card h3 { margin: 0 0 6px; font-size: 16px; }
+		.card p { margin: 0; color: var(--muted); font-size: 14px; }
+		.features { padding: 24px 0 80px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+		.feature {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			padding: 20px;
+		}
+		.feature h2 { margin: 0 0 8px; font-size: 18px; }
+		.feature p { margin: 0; color: var(--muted); font-size: 14px; }
+		footer { border-top: 1px solid var(--border); padding: 24px 0 40px; color: var(--muted); font-size: 14px; }
+		@media (max-width: 900px) {
+			.hero, .features { grid-template-columns: 1fr; }
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<header>
+			<div class="logo">Beauty <span>Trust</span></div>
+		</header>
+		<section class="hero">
+			<div>
+				<div class="badge">Сообщество мастеров красоты</div>
+				<h1>Проверяйте клиентов. Защищайте доход. Делитесь опытом.</h1>
+				<p class="lead">Beauty Trust помогает мастерам принимать решения о записи, фиксировать результаты визитов и получать поддержку в закрытом сообществе.</p>
+				<div class="actions">
+					<a class="btn btn-primary" href="#download">Скачать приложение</a>
+					<a class="btn btn-secondary" href="https://apis.beautytrust.ru/docs" target="_blank" rel="noopener">API документация</a>
+				</div>
+			</div>
+			<div class="phone">
+				<div class="phone-top"></div>
+				<div class="card">
+					<h3>Проверка клиента</h3>
+					<p>Рейтинг, отзывы мастеров и риск неявки по номеру телефона</p>
+				</div>
+				<div class="card">
+					<h3>Защищённый доход</h3>
+					<p>Статистика предотвращённых неявок и выполненных проверок</p>
+				</div>
+				<div class="card">
+					<h3>Техподдержка 24/7</h3>
+					<p>Личные обращения видны только вам и администраторам</p>
+				</div>
+			</div>
+		</section>
+		<section class="features">
+			<div class="feature">
+				<h2>Проверка перед записью</h2>
+				<p>Узнайте надёжность клиента до визита и снижайте риск потерь.</p>
+			</div>
+			<div class="feature">
+				<h2>Записи и результат визита</h2>
+				<p>Ведите расписание, фиксируйте оплату, поведение и чаевые.</p>
+			</div>
+			<div class="feature">
+				<h2>Сообщество мастеров</h2>
+				<p>Обсуждайте рабочие ситуации и получайте советы коллег.</p>
+			</div>
+		</section>
+		<section id="download">
+			<div class="feature">
+				<h2>Скачать приложение</h2>
+				<p>Мобильное приложение Beauty Trust подключается к API <strong>apis.beautytrust.ru</strong>. Сборка для iOS и Android доступна мастерам по приглашению.</p>
+			</div>
+		</section>
+		<footer>
+			© 2026 Beauty Trust. Все права защищены.
+		</footer>
+	</div>
+</body>
+</html>

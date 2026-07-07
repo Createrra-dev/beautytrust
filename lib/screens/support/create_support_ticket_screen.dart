@@ -31,15 +31,19 @@ class _CreateSupportTicketScreenState extends State<CreateSupportTicketScreen> {
 			_descriptionController.text.trim().isNotEmpty;
 	}
 
-	void _createTicket() {
+	void _createTicket() async {
 		if (!_canCreate) {
 			return;
 		}
 
-		final ticket = _supportService.createTicket(
+		final ticket = await _supportService.createTicket(
 			title: _titleController.text,
 			description: _descriptionController.text,
 		);
+
+		if (!mounted) {
+			return;
+		}
 
 		Navigator.of(context)
 			..pop()

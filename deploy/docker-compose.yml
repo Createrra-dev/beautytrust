@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: beautytrust
+      POSTGRES_USER: beautytrust
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beautytrust_prod_change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beautytrust -d beautytrust"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://beautytrust:${POSTGRES_PASSWORD:-beautytrust_prod_change_me}@postgres:5432/beautytrust
+      PUBLIC_BASE_URL: https://apis.beautytrust.ru
+      UPLOADS_DIR: /app/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - api_data:/app/data
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.active.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../landing:/var/www/landing:ro
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    depends_on:
+      - api
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: /bin/sh
+
+volumes:
+  postgres_data:
+  api_data:
+  certbot_www:
+  certbot_conf:

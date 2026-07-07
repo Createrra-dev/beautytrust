@@ -68,7 +68,7 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 		_phoneController.clear();
 	}
 
-	void _runCheck() {
+	void _runCheck() async {
 		_phoneFocusNode.unfocus();
 
 		final phoneText = _phoneController.text;
@@ -81,7 +81,15 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 			return;
 		}
 
-		final lookupResult = ClientProfileService.lookupByPhone(phoneText);
+		setState(() {
+			_errorText = null;
+		});
+
+		final lookupResult = await ClientProfileService.lookupByPhone(phoneText);
+		if (!mounted) {
+			return;
+		}
+
 		if (lookupResult == null) {
 			setState(() {
 				_result = null;
@@ -90,6 +98,11 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 			_clearPhoneInput();
 			return;
 		}
+
+		ClientProfileService.cacheProfile(
+			extractPhoneDigits(phoneText),
+			lookupResult.profile,
+		);
 
 		setState(() {
 			_result = lookupResult;

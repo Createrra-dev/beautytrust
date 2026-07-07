@@ -30,15 +30,19 @@ class _CreateCommunityTopicScreenState extends State<CreateCommunityTopicScreen>
 			_storyController.text.trim().isNotEmpty;
 	}
 
-	void _createTopic() {
+	void _createTopic() async {
 		if (!_canCreate) {
 			return;
 		}
 
-		_communityService.createTopic(
+		await _communityService.createTopic(
 			title: _titleController.text,
 			story: _storyController.text,
 		);
+
+		if (!mounted) {
+			return;
+		}
 
 		Navigator.of(context).pop();
 	}

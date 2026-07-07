@@ -93,7 +93,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 		setState(() => _selectedTime = pickedTime);
 	}
 
-	void _save() {
+	void _save() async {
 		_phoneFocusNode.unfocus();
 
 		final clientName = _nameController.text.trim();
@@ -121,7 +121,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 		var daysSinceVerified = widget.appointment.daysSinceVerified;
 
 		if (phoneChanged) {
-			final checkResult = ClientProfileService.lookupByPhone(_phoneController.text);
+			final checkResult = await ClientProfileService.lookupByPhone(_phoneController.text);
 			if (checkResult == null) {
 				setState(() {
 					_errorText = 'Клиент не найден в базе сообщества';
@@ -132,6 +132,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 			clientRating = checkResult.profile.reviewsAverage;
 			riskLevel = appointmentRiskLevelForRating(clientRating);
 			daysSinceVerified = 0;
+			ClientProfileService.cacheProfile(phoneDigits, checkResult.profile);
 		}
 
 		final scheduledAt = DateTime(
@@ -154,7 +155,7 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 			daysSinceVerified: daysSinceVerified,
 		);
 
-		DashboardDataService.updateAppointment(updatedAppointment);
+		await DashboardDataService.updateAppointment(updatedAppointment);
 		Navigator.of(context).pop(phoneChanged);
 	}
 

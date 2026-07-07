@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
 		super.initState();
 		_selectedPeriod = DashboardDataService.defaultPeriod;
 		_dashboardService.addListener(_onDashboardChanged);
+		DashboardDataService.syncFromApi();
 	}
 
 	@override

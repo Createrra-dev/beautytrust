@@ -23,6 +23,7 @@ class _CommunityTopicsScreenState extends State<CommunityTopicsScreen> {
 		super.initState();
 		_communityService.addListener(_onCommunityChanged);
 		_searchController.addListener(_onSearchChanged);
+		_communityService.syncFromApi();
 	}
 
 	@override
@@ -39,6 +40,7 @@ class _CommunityTopicsScreenState extends State<CommunityTopicsScreen> {
 
 	void _onSearchChanged() {
 		setState(() => _searchQuery = _searchController.text);
+		_communityService.syncFromApi(query: _searchQuery);
 	}
 
 	void _openCreateTopic() {

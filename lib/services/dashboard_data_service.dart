@@ -4,13 +4,13 @@ import '../models/appointment_record.dart';
 import '../models/dashboard_period.dart';
 import '../models/dashboard_stats.dart';
 import '../models/visit_result.dart';
+import 'api/app_api_repository.dart';
 
 class DashboardDataService extends ChangeNotifier {
-	DashboardDataService._() {
-		_appointments.addAll(_buildInitialAppointments());
-	}
+	DashboardDataService._();
 
 	static final DashboardDataService instance = DashboardDataService._();
+	static final AppApiRepository _api = AppApiRepository();
 
 	static final List<DashboardPeriod> availablePeriods = [
 		const DashboardPeriod(year: 2026, month: 7),
@@ -44,180 +44,46 @@ class DashboardDataService extends ChangeNotifier {
 		return List<AppointmentRecord>.from(instance._appointments);
 	}
 
-	static void addAppointment(AppointmentRecord appointment) {
-		instance._appointments.insert(0, appointment);
+	static Future<void> syncFromApi() async {
+		final appointments = await _api.fetchAppointments();
+		instance._appointments
+			..clear()
+			..addAll(appointments);
 		instance.notifyListeners();
 	}
 
-	static void saveVisitResult(String appointmentId, VisitResult visitResult) {
+	static Future<void> addAppointment(AppointmentRecord appointment) async {
+		final created = await _api.createAppointment(appointment);
+		instance._appointments.insert(0, created);
+		instance.notifyListeners();
+	}
+
+	static Future<void> saveVisitResult(String appointmentId, VisitResult visitResult) async {
+		final updated = await _api.saveVisitResult(appointmentId, visitResult);
 		final appointmentIndex = instance._appointments.indexWhere(
 			(appointment) => appointment.id == appointmentId,
 		);
-
 		if (appointmentIndex == -1) {
-			return;
+			instance._appointments.insert(0, updated);
+		} else {
+			instance._appointments[appointmentIndex] = updated;
 		}
-
-		final appointment = instance._appointments[appointmentIndex];
-		instance._appointments[appointmentIndex] = appointment.copyWith(
-			visitResult: visitResult,
-		);
 		instance.notifyListeners();
 	}
 
-	static void updateAppointment(AppointmentRecord appointment) {
+	static Future<void> updateAppointment(AppointmentRecord appointment) async {
+		final updated = await _api.updateAppointment(appointment);
 		final appointmentIndex = instance._appointments.indexWhere(
 			(item) => item.id == appointment.id,
 		);
-
 		if (appointmentIndex == -1) {
 			return;
 		}
-
-		instance._appointments[appointmentIndex] = appointment;
+		instance._appointments[appointmentIndex] = updated;
 		instance.notifyListeners();
 	}
 
 	final List<AppointmentRecord> _appointments = [];
-	var _nextAppointmentId = 100;
-
-	static String nextAppointmentId() {
-		final id = 'appointment-${instance._nextAppointmentId}';
-		instance._nextAppointmentId += 1;
-		return id;
-	}
-
-	static List<AppointmentRecord> _buildInitialAppointments() {
-		final today = DateTime(2026, 7, 7);
-
-		DateTime at(int dayOffset, int hour, int minute) {
-			final date = today.add(Duration(days: dayOffset));
-			return DateTime(date.year, date.month, date.day, hour, minute);
-		}
-
-		return [
-			AppointmentRecord(
-				id: '1',
-				clientName: 'Анна',
-				clientPhoneDigits: '9992345678',
-				serviceName: 'Маникюр + покрытие',
-				serviceDurationLabel: '2 ч',
-				scheduledAt: at(0, 10, 0),
-				servicePrice: 2500,
-				clientRating: 4.9,
-				riskLevel: AppointmentRiskLevel.low,
-				daysSinceVerified: 0,
-			),
-			AppointmentRecord(
-				id: '2',
-				clientName: 'Мария',
-				clientPhoneDigits: '9165551234',
-				serviceName: 'Стрижка и укладка',
-				serviceDurationLabel: '1,5 ч',
-				scheduledAt: at(0, 14, 0),
-				servicePrice: 3200,
-				clientRating: 3.4,
-				riskLevel: AppointmentRiskLevel.medium,
-				daysSinceVerified: 1,
-			),
-			AppointmentRecord(
-				id: '3',
-				clientName: 'Екатерина',
-				clientPhoneDigits: '9991234567',
-				serviceName: 'Окрашивание',
-				serviceDurationLabel: '3 ч',
-				scheduledAt: at(1, 11, 0),
-				servicePrice: 5800,
-				clientRating: 4.2,
-				riskLevel: AppointmentRiskLevel.low,
-				daysSinceVerified: 0,
-			),
-			AppointmentRecord(
-				id: '4',
-				clientName: 'Ольга',
-				clientPhoneDigits: '9031112233',
-				serviceName: 'Педикюр',
-				serviceDurationLabel: '1,5 ч',
-				scheduledAt: at(2, 15, 30),
-				servicePrice: 2800,
-				clientRating: 4.5,
-				riskLevel: AppointmentRiskLevel.low,
-				daysSinceVerified: 2,
-			),
-			AppointmentRecord(
-				id: '5',
-				clientName: 'Дарья',
-				clientPhoneDigits: '9254445566',
-				serviceName: 'Брови + ламинирование',
-				serviceDurationLabel: '1 ч',
-				scheduledAt: at(2, 18, 0),
-				servicePrice: 1900,
-				clientRating: 3.8,
-				riskLevel: AppointmentRiskLevel.medium,
-				daysSinceVerified: 4,
-			),
-			AppointmentRecord(
-				id: '6',
-				clientName: 'Виктория',
-				clientPhoneDigits: '9165551234',
-				serviceName: 'Кератиновое выпрямление',
-				serviceDurationLabel: '4 ч',
-				scheduledAt: at(3, 12, 0),
-				servicePrice: 7500,
-				clientRating: 3.1,
-				riskLevel: AppointmentRiskLevel.medium,
-				daysSinceVerified: 5,
-			),
-			AppointmentRecord(
-				id: '7',
-				clientName: 'Наталья',
-				clientPhoneDigits: '9031112233',
-				serviceName: 'Макияж',
-				serviceDurationLabel: '1,5 ч',
-				scheduledAt: at(4, 9, 30),
-				servicePrice: 3500,
-				clientRating: 4.5,
-				riskLevel: AppointmentRiskLevel.low,
-				daysSinceVerified: 1,
-			),
-			AppointmentRecord(
-				id: '8',
-				clientName: 'Светлана',
-				clientPhoneDigits: '9254445566',
-				serviceName: 'Наращивание ресниц',
-				serviceDurationLabel: '2,5 ч',
-				scheduledAt: at(5, 16, 0),
-				servicePrice: 4200,
-				clientRating: 3.8,
-				riskLevel: AppointmentRiskLevel.medium,
-				daysSinceVerified: 2,
-			),
-			AppointmentRecord(
-				id: '9',
-				clientName: 'Ирина',
-				clientPhoneDigits: '9998765432',
-				serviceName: 'Химическая завивка',
-				serviceDurationLabel: '3,5 ч',
-				scheduledAt: at(6, 13, 0),
-				servicePrice: 6100,
-				clientRating: 1.8,
-				riskLevel: AppointmentRiskLevel.high,
-				daysSinceVerified: 6,
-			),
-			AppointmentRecord(
-				id: '10',
-				clientName: 'Юлия',
-				clientPhoneDigits: '9031112233',
-				serviceName: 'SPA-уход для лица',
-				serviceDurationLabel: '1,5 ч',
-				scheduledAt: at(6, 17, 30),
-				servicePrice: 4800,
-				clientRating: 4.5,
-				riskLevel: AppointmentRiskLevel.low,
-				daysSinceVerified: 0,
-			),
-		];
-	}
 
 	static AppointmentRecord? appointmentById(String id) {
 		for (final appointment in currentAppointments()) {
