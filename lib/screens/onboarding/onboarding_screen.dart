@@ -141,6 +141,10 @@ class _OnboardingPageContent extends StatelessWidget {
 
 	@override
 	Widget build(BuildContext context) {
+		if (page.hasImageLayout) {
+			return _OnboardingImagePage(imageAsset: page.imageAsset!);
+		}
+
 		return Padding(
 			padding: const EdgeInsets.symmetric(horizontal: 32),
 			child: Column(
@@ -175,6 +179,28 @@ class _OnboardingPageContent extends StatelessWidget {
 	}
 }
 
+class _OnboardingImagePage extends StatelessWidget {
+	const _OnboardingImagePage({required this.imageAsset});
+
+	final String imageAsset;
+
+	@override
+	Widget build(BuildContext context) {
+		return LayoutBuilder(
+			builder: (context, constraints) {
+				return SingleChildScrollView(
+					padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+					child: Image.asset(
+						imageAsset,
+						width: constraints.maxWidth,
+						fit: BoxFit.fitWidth,
+					),
+				);
+			},
+		);
+	}
+}
+
 class _OnboardingIllustration extends StatelessWidget {
 	const _OnboardingIllustration({required this.page});
 
@@ -182,6 +208,9 @@ class _OnboardingIllustration extends StatelessWidget {
 
 	@override
 	Widget build(BuildContext context) {
+		final accentColor = page.accentColor ?? AppColors.primary;
+		final icon = page.icon ?? Icons.star_outline;
+
 		return Container(
 			width: 220,
 			height: 220,
@@ -189,8 +218,8 @@ class _OnboardingIllustration extends StatelessWidget {
 				shape: BoxShape.circle,
 				gradient: RadialGradient(
 					colors: [
-						page.accentColor.withValues(alpha: 0.35),
-						page.accentColor.withValues(alpha: 0.08),
+						accentColor.withValues(alpha: 0.35),
+						accentColor.withValues(alpha: 0.08),
 						Colors.transparent,
 					],
 					stops: const [0.2, 0.6, 1.0],
@@ -204,20 +233,20 @@ class _OnboardingIllustration extends StatelessWidget {
 						color: AppColors.surface,
 						borderRadius: BorderRadius.circular(36),
 						border: Border.all(
-							color: page.accentColor.withValues(alpha: 0.4),
+							color: accentColor.withValues(alpha: 0.4),
 						),
 						boxShadow: [
 							BoxShadow(
-								color: page.accentColor.withValues(alpha: 0.2),
+								color: accentColor.withValues(alpha: 0.2),
 								blurRadius: 32,
 								spreadRadius: 4,
 							),
 						],
 					),
 					child: Icon(
-						page.icon,
+						icon,
 						size: 64,
-						color: page.accentColor,
+						color: accentColor,
 					),
 				),
 			),

@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 
 class OnboardingPage {
 	const OnboardingPage({
-		required this.title,
-		required this.description,
-		required this.icon,
-		required this.accentColor,
+		this.title = '',
+		this.description = '',
+		this.icon,
+		this.accentColor,
+		this.imageAsset,
 	});
 
 	final String title;
 	final String description;
-	final IconData icon;
-	final Color accentColor;
+	final IconData? icon;
+	final Color? accentColor;
+	final String? imageAsset;
+
+	bool get hasImageLayout => imageAsset != null;
 }

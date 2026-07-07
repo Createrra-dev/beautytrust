@@ -4,6 +4,7 @@ class AppAssets {
 	AppAssets._();
 
 	static const String logo = 'assets/images/app_logo.png';
+	static const String onboarding1 = 'assets/images/onboarding_1.png';
 }
 
 class AppLogo extends StatelessWidget {
