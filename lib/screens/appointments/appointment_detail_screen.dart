@@ -31,36 +31,39 @@ class AppointmentDetailScreen extends StatelessWidget {
 					Expanded(
 						child: SingleChildScrollView(
 							padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-							child: Container(
-								padding: const EdgeInsets.all(16),
-								decoration: BoxDecoration(
-									color: AppColors.surface,
-									borderRadius: BorderRadius.circular(16),
-									border: Border.all(color: AppColors.border),
-								),
-								child: Column(
-									crossAxisAlignment: CrossAxisAlignment.stretch,
-									children: [
-										_AppointmentSummary(appointment: appointment),
-										const SizedBox(height: 16),
-										_ClientHeader(
-											appointment: appointment,
-											profile: profile,
-											ratingColor: ratingColor,
+							child: Column(
+								crossAxisAlignment: CrossAxisAlignment.stretch,
+								children: [
+									_ClientDataCard(
+										appointment: appointment,
+										profile: profile,
+										ratingColor: ratingColor,
+									),
+									const SizedBox(height: 12),
+									Container(
+										padding: const EdgeInsets.all(16),
+										decoration: BoxDecoration(
+											color: AppColors.surface,
+											borderRadius: BorderRadius.circular(16),
+											border: Border.all(color: AppColors.border),
 										),
-										const SizedBox(height: 16),
-										_StatsRow(profile: profile, ratingColor: ratingColor),
-										const SizedBox(height: 16),
-										const Divider(color: AppColors.border, height: 1),
-										const SizedBox(height: 16),
-										_ReviewsSection(reviews: profile.reviews),
-										const SizedBox(height: 16),
-										_ReliabilityBanner(
-											profile: profile,
-											ratingColor: ratingColor,
+										child: Column(
+											crossAxisAlignment: CrossAxisAlignment.stretch,
+											children: [
+												_StatsRow(profile: profile, ratingColor: ratingColor),
+												const SizedBox(height: 16),
+												const Divider(color: AppColors.border, height: 1),
+												const SizedBox(height: 16),
+												_ReviewsSection(reviews: profile.reviews),
+												const SizedBox(height: 16),
+												_ReliabilityBanner(
+													profile: profile,
+													ratingColor: ratingColor,
+												),
+											],
 										),
-									],
-								),
+									),
+								],
 							),
 						),
 					),
@@ -109,72 +112,8 @@ class _PageHeader extends StatelessWidget {
 	}
 }
 
-class _AppointmentSummary extends StatelessWidget {
-	const _AppointmentSummary({required this.appointment});
-
-	final AppointmentRecord appointment;
-
-	@override
-	Widget build(BuildContext context) {
-		return Container(
-			padding: const EdgeInsets.all(12),
-			decoration: BoxDecoration(
-				color: AppColors.surfaceElevated,
-				borderRadius: BorderRadius.circular(12),
-			),
-			child: Row(
-				children: [
-					Expanded(
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							children: [
-								Text(
-									appointment.serviceName,
-									style: const TextStyle(
-										color: AppColors.textPrimary,
-										fontSize: 15,
-										fontWeight: FontWeight.w600,
-									),
-								),
-								const SizedBox(height: 4),
-								Text(
-									'${appointment.dateLabel}, ${appointment.timeLabel} · ${appointment.priceLineLabel}',
-									style: const TextStyle(
-										color: AppColors.textMuted,
-										fontSize: 12,
-									),
-								),
-							],
-						),
-					),
-					Container(
-						padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-						decoration: BoxDecoration(
-							color: appointmentRiskColor(appointment.riskLevel)
-								.withValues(alpha: 0.12),
-							borderRadius: BorderRadius.circular(8),
-							border: Border.all(
-								color: appointmentRiskColor(appointment.riskLevel)
-									.withValues(alpha: 0.4),
-							),
-						),
-						child: Text(
-							appointment.riskLabel,
-							style: TextStyle(
-								color: appointmentRiskColor(appointment.riskLevel),
-								fontSize: 11,
-								fontWeight: FontWeight.w600,
-							),
-						),
-					),
-				],
-			),
-		);
-	}
-}
-
-class _ClientHeader extends StatelessWidget {
-	const _ClientHeader({
+class _ClientDataCard extends StatelessWidget {
+	const _ClientDataCard({
 		required this.appointment,
 		required this.profile,
 		required this.ratingColor,
@@ -188,69 +127,91 @@ class _ClientHeader extends StatelessWidget {
 	Widget build(BuildContext context) {
 		final initials = _initials(appointment.clientName);
 
-		return Row(
-			crossAxisAlignment: CrossAxisAlignment.start,
-			children: [
-				CircleAvatar(
-					radius: 28,
-					backgroundColor: AppColors.surfaceElevated,
-					child: Text(
-						initials,
-						style: const TextStyle(
-							color: AppColors.textPrimary,
-							fontSize: 18,
-							fontWeight: FontWeight.w600,
+		return Container(
+			padding: const EdgeInsets.all(16),
+			decoration: BoxDecoration(
+				color: AppColors.surface,
+				borderRadius: BorderRadius.circular(16),
+				border: Border.all(color: AppColors.border),
+			),
+			child: Row(
+				crossAxisAlignment: CrossAxisAlignment.center,
+				children: [
+					Container(
+						decoration: BoxDecoration(
+							shape: BoxShape.circle,
+							border: Border.all(
+								color: AppColors.border,
+								width: 1.5,
+							),
 						),
-					),
-				),
-				const SizedBox(width: 12),
-				Expanded(
-					child: Column(
-						crossAxisAlignment: CrossAxisAlignment.start,
-						children: [
-							Text(
-								appointment.clientName,
+						child: CircleAvatar(
+							radius: 26,
+							backgroundColor: AppColors.surfaceElevated,
+							child: Text(
+								initials,
 								style: const TextStyle(
 									color: AppColors.textPrimary,
-									fontSize: 18,
+									fontSize: 17,
+									fontWeight: FontWeight.w600,
+								),
+							),
+						),
+					),
+					const SizedBox(width: 12),
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							mainAxisSize: MainAxisSize.min,
+							children: [
+								Text(
+									appointment.clientName,
+									maxLines: 1,
+									overflow: TextOverflow.ellipsis,
+									style: const TextStyle(
+										color: AppColors.textPrimary,
+										fontSize: 16,
+										fontWeight: FontWeight.w600,
+									),
+								),
+								const SizedBox(height: 4),
+								Text(
+									profile.phone,
+									style: const TextStyle(
+										color: AppColors.textMuted,
+										fontSize: 14,
+									),
+								),
+							],
+						),
+					),
+					const SizedBox(width: 8),
+					Column(
+						crossAxisAlignment: CrossAxisAlignment.end,
+						mainAxisSize: MainAxisSize.min,
+						children: [
+							Text(
+								formatAppointmentRating(profile.reviewsAverage),
+								style: TextStyle(
+									color: ratingColor,
+									fontSize: 24,
 									fontWeight: FontWeight.w700,
+									height: 1,
 								),
 							),
 							const SizedBox(height: 4),
 							Text(
-								profile.phone,
-								style: const TextStyle(
-									color: AppColors.textMuted,
+								profile.ratingLabel,
+								style: TextStyle(
+									color: ratingColor,
 									fontSize: 14,
+									fontWeight: FontWeight.w600,
 								),
 							),
 						],
 					),
-				),
-				Column(
-					crossAxisAlignment: CrossAxisAlignment.end,
-					children: [
-						Text(
-							formatAppointmentRating(profile.reviewsAverage),
-							style: TextStyle(
-								color: ratingColor,
-								fontSize: 28,
-								fontWeight: FontWeight.w700,
-								height: 1,
-							),
-						),
-						const SizedBox(height: 4),
-						Text(
-							profile.ratingLabel,
-							style: TextStyle(
-								color: ratingColor,
-								fontSize: 13,
-								fontWeight: FontWeight.w600,
-							),
-						),
-					],
-				),
-			],
+				],
+			),
 		);
 	}
 
