@@ -26,32 +26,39 @@ class AppBottomNavigation extends StatelessWidget {
 
 	@override
 	Widget build(BuildContext context) {
-		return MotionTabBar(
-			controller: controller,
-			initialSelectedTab: tabLabels[homeTabIndex],
-			labels: tabLabels,
-			icons: const [
-				Icons.verified_user_outlined,
-				Icons.schedule_outlined,
-				Icons.home_outlined,
-				Icons.people_outline_rounded,
-				Icons.person_outline_rounded,
-			],
-			tabBarColor: AppColors.surface,
-			tabBarHeight: 62,
-			tabSize: 48,
-			tabIconColor: AppColors.textMuted,
-			tabIconSize: 22,
-			tabIconSelectedSize: 20,
-			tabSelectedColor: AppColors.primary,
-			tabIconSelectedColor: AppColors.textPrimary,
-			textStyle: const TextStyle(
-				color: AppColors.textPrimary,
-				fontSize: 10,
-				fontWeight: FontWeight.w600,
+		return DecoratedBox(
+			decoration: const BoxDecoration(
+				border: Border(
+					top: BorderSide(color: AppColors.border),
+				),
 			),
-			useSafeArea: true,
-			onTabItemSelected: onTabSelected,
+			child: MotionTabBar(
+				controller: controller,
+				initialSelectedTab: tabLabels[homeTabIndex],
+				labels: tabLabels,
+				icons: const [
+					Icons.verified_user_outlined,
+					Icons.schedule_outlined,
+					Icons.home_outlined,
+					Icons.people_outline_rounded,
+					Icons.person_outline_rounded,
+				],
+				tabBarColor: AppColors.background,
+				tabBarHeight: 62,
+				tabSize: 48,
+				tabIconColor: AppColors.textMuted,
+				tabIconSize: 22,
+				tabIconSelectedSize: 20,
+				tabSelectedColor: AppColors.primary,
+				tabIconSelectedColor: AppColors.textPrimary,
+				textStyle: const TextStyle(
+					color: AppColors.textPrimary,
+					fontSize: 10,
+					fontWeight: FontWeight.w600,
+				),
+				useSafeArea: true,
+				onTabItemSelected: onTabSelected,
+			),
 		);
 	}
 }
