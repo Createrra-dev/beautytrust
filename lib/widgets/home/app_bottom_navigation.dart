@@ -15,11 +15,11 @@ class AppBottomNavigation extends StatelessWidget {
 	final ValueChanged<int> onTabSelected;
 
 	static const tabLabels = [
-		'Сообщество',
-		'Профиль',
-		'Home',
 		'Проверка',
 		'История',
+		'Home',
+		'Сообщество',
+		'Профиль',
 	];
 
 	static const homeTabIndex = 2;
@@ -31,11 +31,11 @@ class AppBottomNavigation extends StatelessWidget {
 			initialSelectedTab: tabLabels[homeTabIndex],
 			labels: tabLabels,
 			icons: const [
-				Icons.people_outline_rounded,
-				Icons.person_outline_rounded,
-				Icons.home_outlined,
 				Icons.verified_user_outlined,
 				Icons.schedule_outlined,
+				Icons.home_outlined,
+				Icons.people_outline_rounded,
+				Icons.person_outline_rounded,
 			],
 			tabBarColor: AppColors.surface,
 			tabBarHeight: 62,
