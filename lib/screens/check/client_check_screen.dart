@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/brand_title.dart';
+import '../../widgets/check/book_client_dialog.dart';
 import '../../widgets/check/client_check_result_panel.dart';
 import 'how_it_works_screen.dart';
 
@@ -65,6 +66,29 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 
 	void _openHowItWorks() {
 		Navigator.of(context).pushNamed(HowItWorksScreen.routeName);
+	}
+
+	Future<void> _bookClient() async {
+		final result = _result;
+		if (result == null) {
+			return;
+		}
+
+		final booked = await showBookClientDialog(
+			context: context,
+			checkResult: result,
+		);
+
+		if (!mounted || !booked) {
+			return;
+		}
+
+		ScaffoldMessenger.of(context).showSnackBar(
+			const SnackBar(
+				content: Text('Клиент записан'),
+				behavior: SnackBarBehavior.floating,
+			),
+		);
 	}
 
 	@override
@@ -139,6 +163,12 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 						if (_result != null) ...[
 							const SizedBox(height: 20),
 							ClientCheckResultPanel(result: _result!),
+							const SizedBox(height: 16),
+							FilledButton.icon(
+								onPressed: _bookClient,
+								icon: const Icon(Icons.event_available_outlined),
+								label: const Text('Записать клиента'),
+							),
 						],
 					],
 				),

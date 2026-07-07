@@ -15,11 +15,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 	late DashboardPeriod _selectedPeriod;
+	final _dashboardService = DashboardDataService.instance;
 
 	@override
 	void initState() {
 		super.initState();
 		_selectedPeriod = DashboardDataService.defaultPeriod;
+		_dashboardService.addListener(_onDashboardChanged);
+	}
+
+	@override
+	void dispose() {
+		_dashboardService.removeListener(_onDashboardChanged);
+		super.dispose();
+	}
+
+	void _onDashboardChanged() {
+		setState(() {});
 	}
 
 	Future<void> _openPeriodPicker() async {

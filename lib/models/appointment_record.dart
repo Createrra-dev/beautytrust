@@ -134,3 +134,52 @@ String formatServicePrice(int price) {
 
 	return '${buffer.toString()} ₽';
 }
+
+String formatAppointmentDateLabel(DateTime date, {DateTime? referenceNow}) {
+	final now = referenceNow ?? DateTime.now();
+	final today = DateTime(now.year, now.month, now.day);
+	final target = DateTime(date.year, date.month, date.day);
+	final tomorrow = today.add(const Duration(days: 1));
+
+	if (target == today) {
+		return 'Сегодня';
+	}
+
+	if (target == tomorrow) {
+		return 'Завтра';
+	}
+
+	const monthLabels = [
+		'января',
+		'февраля',
+		'марта',
+		'апреля',
+		'мая',
+		'июня',
+		'июля',
+		'августа',
+		'сентября',
+		'октября',
+		'ноября',
+		'декабря',
+	];
+
+	return '${date.day} ${monthLabels[date.month - 1]}';
+}
+
+String formatAppointmentTimeLabel(DateTime date) {
+	return '${date.hour.toString().padLeft(2, '0')}:'
+		'${date.minute.toString().padLeft(2, '0')}';
+}
+
+AppointmentRiskLevel appointmentRiskLevelForRating(double rating) {
+	if (rating >= 4) {
+		return AppointmentRiskLevel.low;
+	}
+
+	if (rating >= 3) {
+		return AppointmentRiskLevel.medium;
+	}
+
+	return AppointmentRiskLevel.high;
+}

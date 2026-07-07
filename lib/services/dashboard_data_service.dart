@@ -1,9 +1,15 @@
+import 'package:flutter/foundation.dart';
+
 import '../models/appointment_record.dart';
 import '../models/dashboard_period.dart';
 import '../models/dashboard_stats.dart';
 
-class DashboardDataService {
-	DashboardDataService._();
+class DashboardDataService extends ChangeNotifier {
+	DashboardDataService._() {
+		_appointments.addAll(_initialAppointments);
+	}
+
+	static final DashboardDataService instance = DashboardDataService._();
 
 	static final List<DashboardPeriod> availablePeriods = [
 		const DashboardPeriod(year: 2026, month: 7),
@@ -34,7 +40,24 @@ class DashboardDataService {
 	}
 
 	static List<AppointmentRecord> currentAppointments() {
-		return const [
+		return List<AppointmentRecord>.from(instance._appointments);
+	}
+
+	static void addAppointment(AppointmentRecord appointment) {
+		instance._appointments.insert(0, appointment);
+		instance.notifyListeners();
+	}
+
+	final List<AppointmentRecord> _appointments = [];
+	var _nextAppointmentId = 100;
+
+	static String nextAppointmentId() {
+		final id = 'appointment-${instance._nextAppointmentId}';
+		instance._nextAppointmentId += 1;
+		return id;
+	}
+
+	static const List<AppointmentRecord> _initialAppointments = [
 			AppointmentRecord(
 				id: '1',
 				clientName: 'Анна',
@@ -156,7 +179,6 @@ class DashboardDataService {
 				daysSinceVerified: 0,
 			),
 		];
-	}
 
 	static AppointmentRecord? appointmentById(String id) {
 		for (final appointment in currentAppointments()) {
