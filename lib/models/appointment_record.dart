@@ -47,6 +47,14 @@ class AppointmentRecord {
 		return 'Проверен $daysSinceVerified дн. назад';
 	}
 
+	String get verifiedSubtitle {
+		if (daysSinceVerified <= 0) {
+			return 'сегодня';
+		}
+
+		return '$daysSinceVerified дн. назад';
+	}
+
 	String get priceLineLabel {
 		return '$serviceDurationLabel • ${formatServicePrice(servicePrice)}';
 	}

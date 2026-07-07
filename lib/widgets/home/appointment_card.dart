@@ -85,7 +85,7 @@ class AppointmentCard extends StatelessWidget {
 									ratingColor: ratingColor,
 									riskLabel: appointment.riskLabel,
 									riskColor: riskColor,
-									verifiedLabel: appointment.verifiedLabel,
+									verifiedSubtitle: appointment.verifiedSubtitle,
 								),
 								const Icon(
 									Icons.chevron_right_rounded,
@@ -161,47 +161,48 @@ class _MetaColumn extends StatelessWidget {
 		required this.ratingColor,
 		required this.riskLabel,
 		required this.riskColor,
-		required this.verifiedLabel,
+		required this.verifiedSubtitle,
 	});
 
 	final double rating;
 	final Color ratingColor;
 	final String riskLabel;
 	final Color riskColor;
-	final String verifiedLabel;
+	final String verifiedSubtitle;
+
+	static const _verifiedStyle = TextStyle(
+		color: AppColors.textMuted,
+		fontSize: 10,
+		height: 1.15,
+	);
 
 	@override
 	Widget build(BuildContext context) {
-		return SizedBox(
-			width: 104,
-			child: Column(
-				crossAxisAlignment: CrossAxisAlignment.end,
-				mainAxisSize: MainAxisSize.min,
-				children: [
-					_RatingBadge(
-						rating: rating,
-						color: ratingColor,
-					),
-					const SizedBox(height: 4),
-					_RiskBadge(
-						label: riskLabel,
-						color: riskColor,
-					),
-					const SizedBox(height: 4),
-					Text(
-						verifiedLabel,
-						maxLines: 1,
-						softWrap: false,
-						overflow: TextOverflow.ellipsis,
-						textAlign: TextAlign.right,
-						style: const TextStyle(
-							color: AppColors.textMuted,
-							fontSize: 11,
-							height: 1.2,
-						),
-					),
-				],
-			),
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.end,
+			mainAxisSize: MainAxisSize.min,
+			children: [
+				_RatingBadge(
+					rating: rating,
+					color: ratingColor,
+				),
+				const SizedBox(height: 4),
+				_RiskBadge(
+					label: riskLabel,
+					color: riskColor,
+				),
+				const SizedBox(height: 4),
+				const Text(
+					'Проверен',
+					textAlign: TextAlign.right,
+					style: _verifiedStyle,
+				),
+				Text(
+					verifiedSubtitle,
+					textAlign: TextAlign.right,
+					style: _verifiedStyle,
+				),
+			],
 		);
 	}
 }
