@@ -6,7 +6,7 @@ import '../../services/tariff_pricing_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/profile/tariff_plan_card.dart';
 import '../../widgets/profile/tariff_segment_switch.dart';
-import 'tariff_detail_screen.dart';
+import 'tariff_payment_screen.dart';
 import 'tariff_success_screen.dart';
 
 class TariffsScreen extends StatefulWidget {
@@ -76,7 +76,7 @@ class _TariffsScreenState extends State<TariffsScreen> {
 		}
 
 		Navigator.of(context).pushNamed(
-			TariffDetailScreen.routeName,
+			TariffPaymentScreen.routeName,
 			arguments: plan,
 		);
 	}

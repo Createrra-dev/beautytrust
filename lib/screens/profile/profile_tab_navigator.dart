@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/tariff_payment_summary.dart';
 import '../../models/tariff_plan.dart';
 import 'master_profile_screen.dart';
-import 'tariff_detail_screen.dart';
 import 'tariff_payment_screen.dart';
 import 'tariff_success_screen.dart';
 import 'tariffs_screen.dart';
@@ -20,13 +19,6 @@ class ProfileTabNavigator extends StatelessWidget {
 						return MaterialPageRoute(
 							settings: settings,
 							builder: (context) => const TariffsScreen(),
-						);
-					case TariffDetailScreen.routeName:
-						return MaterialPageRoute(
-							settings: settings,
-							builder: (context) => TariffDetailScreen(
-								plan: settings.arguments! as TariffPlan,
-							),
 						);
 					case TariffPaymentScreen.routeName:
 						return MaterialPageRoute(
