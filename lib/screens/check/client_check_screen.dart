@@ -18,17 +18,23 @@ class ClientCheckScreen extends StatefulWidget {
 
 class _ClientCheckScreenState extends State<ClientCheckScreen> {
 	final _phoneController = TextEditingController();
+	final _phoneFocusNode = FocusNode();
 	ClientCheckResult? _result;
 	String? _errorText;
 
 	@override
 	void dispose() {
 		_phoneController.dispose();
+		_phoneFocusNode.dispose();
 		super.dispose();
 	}
 
+	void _clearPhoneInput() {
+		_phoneController.clear();
+	}
+
 	void _runCheck() {
-		FocusManager.instance.primaryFocus?.unfocus();
+		_phoneFocusNode.unfocus();
 
 		final phoneText = _phoneController.text;
 
@@ -46,6 +52,7 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 				_result = null;
 				_errorText = 'Клиент не найден в базе сообщества';
 			});
+			_clearPhoneInput();
 			return;
 		}
 
@@ -53,6 +60,7 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 			_result = lookupResult;
 			_errorText = null;
 		});
+		_clearPhoneInput();
 	}
 
 	void _openHowItWorks() {
@@ -100,6 +108,7 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 						const SizedBox(height: 24),
 						_ClientPhoneSearchBar(
 							controller: _phoneController,
+							focusNode: _phoneFocusNode,
 							onSearch: _runCheck,
 						),
 						if (_errorText != null) ...[
@@ -141,10 +150,12 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 class _ClientPhoneSearchBar extends StatelessWidget {
 	const _ClientPhoneSearchBar({
 		required this.controller,
+		required this.focusNode,
 		required this.onSearch,
 	});
 
 	final TextEditingController controller;
+	final FocusNode focusNode;
 	final VoidCallback onSearch;
 
 	@override
@@ -171,6 +182,7 @@ class _ClientPhoneSearchBar extends StatelessWidget {
 					Expanded(
 						child: TextField(
 							controller: controller,
+							focusNode: focusNode,
 							keyboardType: TextInputType.phone,
 							textInputAction: TextInputAction.search,
 							inputFormatters: [
