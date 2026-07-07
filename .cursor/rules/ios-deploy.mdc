@@ -1,0 +1,41 @@
+---
+description: Установка Flutter-сборки на iPhone или симулятор после каждой итерации
+alwaysApply: true
+---
+
+# Деплой на iOS после итерации
+
+После каждого изменения Flutter-кода **всегда** устанавливай приложение на устройство.
+
+## Порядок выбора устройства
+
+1. **Реальный iPhone** `SnuSmuMrik` (`00008150-001E448A3C88401C`) — приоритет.
+2. Если недоступен — **симулятор** `iPhone 17 Pro` (`D4F04981-5E46-4697-BECB-A2AB6AD9C1F5`).
+
+Проверка: `flutter devices`.
+
+## Команда сборки
+
+**Реальный iPhone** — LAN IP Mac, не `127.0.0.1`:
+
+```bash
+flutter build ios --release --dart-define=API_BASE_URL=http://192.168.2.101:8000
+flutter install --release -d 00008150-001E448A3C88401C
+```
+
+**Симулятор**:
+
+```bash
+flutter build ios --release --dart-define=API_BASE_URL=http://127.0.0.1:8000
+flutter install --release -d D4F04981-5E46-4697-BECB-A2AB6AD9C1F5
+```
+
+IP Mac: `ipconfig getifaddr en0` (если изменился — подставить актуальный).
+
+## Когда пропускать
+
+Только если задача **не затрагивает** Flutter/UI (например, правки только backend или документации).
+
+## Сообщение пользователю
+
+Указывай: устройство (SnuSmuMrik или симулятор) и что установлено.
