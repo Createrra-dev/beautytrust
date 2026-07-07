@@ -28,6 +28,8 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 	}
 
 	void _runCheck() {
+		FocusManager.instance.primaryFocus?.unfocus();
+
 		final phoneText = _phoneController.text;
 
 		if (!isPhoneComplete(phoneText)) {
@@ -61,6 +63,7 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 	Widget build(BuildContext context) {
 		return SafeArea(
 			child: SingleChildScrollView(
+				keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
 				padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
 				child: Column(
 					crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -169,6 +172,7 @@ class _ClientPhoneSearchBar extends StatelessWidget {
 						child: TextField(
 							controller: controller,
 							keyboardType: TextInputType.phone,
+							textInputAction: TextInputAction.search,
 							inputFormatters: [
 								PhoneInputFormatter(),
 							],
