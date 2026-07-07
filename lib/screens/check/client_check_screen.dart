@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/brand_title.dart';
+import '../../widgets/app_snack_bar.dart';
 import '../../widgets/check/book_client_dialog.dart';
 import '../../widgets/check/client_check_result_panel.dart';
 import 'how_it_works_screen.dart';
@@ -83,11 +84,10 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 			return;
 		}
 
-		ScaffoldMessenger.of(context).showSnackBar(
-			const SnackBar(
-				content: Text('Клиент записан'),
-				behavior: SnackBarBehavior.floating,
-			),
+		AppSnackBar.show(
+			context,
+			'Клиент записан',
+			type: AppSnackBarType.success,
 		);
 	}
 

@@ -4,6 +4,7 @@ import '../../models/appointment_record.dart';
 import '../../models/client_profile.dart';
 import '../../services/client_profile_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_snack_bar.dart';
 import '../../widgets/reviews/master_review_card.dart';
 
 class AppointmentDetailScreen extends StatelessWidget {
@@ -278,10 +279,9 @@ class _AppointmentDetailsCard extends StatelessWidget {
 							Expanded(
 								child: OutlinedButton.icon(
 									onPressed: () {
-										ScaffoldMessenger.of(context).showSnackBar(
-											const SnackBar(
-												content: Text('Редактирование записи скоро будет доступно'),
-											),
+										AppSnackBar.show(
+											context,
+											'Редактирование записи скоро будет доступно',
 										);
 									},
 									icon: const Icon(Icons.edit_outlined, size: 18),
@@ -297,10 +297,9 @@ class _AppointmentDetailsCard extends StatelessWidget {
 							Expanded(
 								child: OutlinedButton.icon(
 									onPressed: () {
-										ScaffoldMessenger.of(context).showSnackBar(
-											const SnackBar(
-												content: Text('Удаление записи скоро будет доступно'),
-											),
+										AppSnackBar.show(
+											context,
+											'Удаление записи скоро будет доступно',
 										);
 									},
 									icon: const Icon(Icons.delete_outline, size: 18),

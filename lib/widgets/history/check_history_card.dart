@@ -5,6 +5,7 @@ import '../../models/check_history_record.dart';
 import '../../screens/appointments/appointment_detail_screen.dart';
 import '../../services/dashboard_data_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_snack_bar.dart';
 
 class CheckHistoryCard extends StatelessWidget {
 	const CheckHistoryCard({
@@ -112,16 +113,19 @@ class CheckHistoryCard extends StatelessWidget {
 	void _openDetails(BuildContext context) {
 		final appointmentId = record.appointmentId;
 		if (appointmentId == null) {
-			ScaffoldMessenger.of(context).showSnackBar(
-				const SnackBar(content: Text('Детали проверки скоро будут доступны')),
+			AppSnackBar.show(
+				context,
+				'Детали проверки скоро будут доступны',
 			);
 			return;
 		}
 
 		final appointment = DashboardDataService.appointmentById(appointmentId);
 		if (appointment == null) {
-			ScaffoldMessenger.of(context).showSnackBar(
-				const SnackBar(content: Text('Запись для этой проверки не найдена')),
+			AppSnackBar.show(
+				context,
+				'Запись для этой проверки не найдена',
+				type: AppSnackBarType.error,
 			);
 			return;
 		}

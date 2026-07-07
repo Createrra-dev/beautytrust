@@ -4,6 +4,7 @@ import '../../models/appointment_record.dart';
 import '../../models/master_profile.dart';
 import '../../services/master_profile_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_snack_bar.dart';
 import '../../widgets/profile/profile_menu_item.dart';
 import 'tariffs_screen.dart';
 
@@ -42,8 +43,9 @@ class MasterProfileScreen extends StatelessWidget {
 			return;
 		}
 
-		ScaffoldMessenger.of(context).showSnackBar(
-			SnackBar(content: Text('«${item.title}» скоро будет доступно')),
+		AppSnackBar.show(
+			context,
+			'«${item.title}» скоро будет доступно',
 		);
 	}
 }

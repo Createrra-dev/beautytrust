@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/check_history_record.dart';
 import '../../services/check_history_data_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_snack_bar.dart';
 import '../../widgets/history/check_history_card.dart';
 import '../../widgets/history/check_history_filter_bar.dart';
 
@@ -83,10 +84,9 @@ class _CheckHistoryHeader extends StatelessWidget {
 					),
 					IconButton(
 						onPressed: () {
-							ScaffoldMessenger.of(context).showSnackBar(
-								const SnackBar(
-									content: Text('Уведомления скоро будут доступны'),
-								),
+							AppSnackBar.show(
+								context,
+								'Уведомления скоро будут доступны',
 							);
 						},
 						icon: const Icon(
