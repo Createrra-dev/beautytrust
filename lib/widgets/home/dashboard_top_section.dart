@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/dashboard_stats.dart';
 import '../../theme/app_theme.dart';
+import '../app_logo.dart';
+import '../brand_title.dart';
 import 'sparkline_chart.dart';
 
 class DashboardTopSection extends StatelessWidget {
@@ -19,9 +21,20 @@ class DashboardTopSection extends StatelessWidget {
 		return Column(
 			crossAxisAlignment: CrossAxisAlignment.stretch,
 			children: [
-				PeriodSelector(
-					periodLabel: stats.periodLabel,
-					onTap: onPeriodTap,
+				Row(
+					crossAxisAlignment: CrossAxisAlignment.center,
+					children: [
+						const AppLogo(size: 36),
+						const SizedBox(width: 10),
+						const Expanded(
+							child: BrandTitle(fontSize: 18),
+						),
+						PeriodSelector(
+							periodLabel: stats.periodLabel,
+							onTap: onPeriodTap,
+							alignEnd: true,
+						),
+					],
 				),
 				const SizedBox(height: 20),
 				ProtectedIncomeCard(stats: stats),
@@ -57,25 +70,31 @@ class PeriodSelector extends StatelessWidget {
 		super.key,
 		required this.periodLabel,
 		this.onTap,
+		this.alignEnd = false,
 	});
 
 	final String periodLabel;
 	final VoidCallback? onTap;
+	final bool alignEnd;
 
 	@override
 	Widget build(BuildContext context) {
+		final labelAlignment = alignEnd
+			? CrossAxisAlignment.end
+			: CrossAxisAlignment.start;
+
 		return Material(
 			color: Colors.transparent,
 			child: InkWell(
 				onTap: onTap,
 				borderRadius: BorderRadius.circular(12),
 				child: Padding(
-					padding: const EdgeInsets.symmetric(vertical: 4),
+					padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
 					child: Row(
 						mainAxisSize: MainAxisSize.min,
 						children: [
 							Column(
-								crossAxisAlignment: CrossAxisAlignment.start,
+								crossAxisAlignment: labelAlignment,
 								children: [
 									const Text(
 										'Период',
