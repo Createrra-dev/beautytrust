@@ -7,7 +7,7 @@ class MasterReview {
 	});
 
 	final String masterName;
-	final int rating;
+	final double rating;
 	final String text;
 	final String tag;
 }

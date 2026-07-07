@@ -28,42 +28,47 @@ class AppointmentDetailScreen extends StatelessWidget {
 						title: 'Детали записи',
 						onBack: () => Navigator.of(context).pop(),
 					),
+					Padding(
+						padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.stretch,
+							children: [
+								_ClientDataCard(
+									appointment: appointment,
+									profile: profile,
+									ratingColor: ratingColor,
+								),
+								const SizedBox(height: 12),
+								_AppointmentDetailsCard(appointment: appointment),
+							],
+						),
+					),
+					const SizedBox(height: 12),
 					Expanded(
 						child: SingleChildScrollView(
 							padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-							child: Column(
-								crossAxisAlignment: CrossAxisAlignment.stretch,
-								children: [
-									_ClientDataCard(
-										appointment: appointment,
-										profile: profile,
-										ratingColor: ratingColor,
-									),
-									const SizedBox(height: 12),
-									Container(
-										padding: const EdgeInsets.all(16),
-										decoration: BoxDecoration(
-											color: AppColors.surface,
-											borderRadius: BorderRadius.circular(16),
-											border: Border.all(color: AppColors.border),
+							child: Container(
+								padding: const EdgeInsets.all(16),
+								decoration: BoxDecoration(
+									color: AppColors.surface,
+									borderRadius: BorderRadius.circular(16),
+									border: Border.all(color: AppColors.border),
+								),
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.stretch,
+									children: [
+										_StatsRow(profile: profile, ratingColor: ratingColor),
+										const SizedBox(height: 16),
+										const Divider(color: AppColors.border, height: 1),
+										const SizedBox(height: 16),
+										_ReviewsSection(reviews: profile.reviews),
+										const SizedBox(height: 16),
+										_ReliabilityBanner(
+											profile: profile,
+											ratingColor: ratingColor,
 										),
-										child: Column(
-											crossAxisAlignment: CrossAxisAlignment.stretch,
-											children: [
-												_StatsRow(profile: profile, ratingColor: ratingColor),
-												const SizedBox(height: 16),
-												const Divider(color: AppColors.border, height: 1),
-												const SizedBox(height: 16),
-												_ReviewsSection(reviews: profile.reviews),
-												const SizedBox(height: 16),
-												_ReliabilityBanner(
-													profile: profile,
-													ratingColor: ratingColor,
-												),
-											],
-										),
-									),
-								],
+									],
+								),
 							),
 						),
 					),
@@ -222,6 +227,108 @@ class _ClientDataCard extends StatelessWidget {
 		}
 
 		return '${parts.first.substring(0, 1)}${parts[1].substring(0, 1)}'.toUpperCase();
+	}
+}
+
+class _AppointmentDetailsCard extends StatelessWidget {
+	const _AppointmentDetailsCard({required this.appointment});
+
+	final AppointmentRecord appointment;
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			padding: const EdgeInsets.all(16),
+			decoration: BoxDecoration(
+				color: AppColors.surface,
+				borderRadius: BorderRadius.circular(16),
+				border: Border.all(color: AppColors.border),
+			),
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.stretch,
+				children: [
+					Row(
+						children: [
+							const Icon(
+								Icons.calendar_today_outlined,
+								size: 16,
+								color: AppColors.primary,
+							),
+							const SizedBox(width: 8),
+							Expanded(
+								child: Text(
+									'${appointment.dateLabel}, ${appointment.timeLabel}',
+									style: const TextStyle(
+										color: AppColors.textPrimary,
+										fontSize: 15,
+										fontWeight: FontWeight.w600,
+									),
+								),
+							),
+						],
+					),
+					const SizedBox(height: 12),
+					Text(
+						appointment.serviceName,
+						style: const TextStyle(
+							color: AppColors.textPrimary,
+							fontSize: 16,
+							fontWeight: FontWeight.w700,
+						),
+					),
+					const SizedBox(height: 6),
+					Text(
+						'Длительность: ${appointment.serviceDurationLabel} · ${formatServicePrice(appointment.servicePrice)}',
+						style: const TextStyle(
+							color: AppColors.textMuted,
+							fontSize: 13,
+						),
+					),
+					const SizedBox(height: 14),
+					Row(
+						children: [
+							Expanded(
+								child: OutlinedButton.icon(
+									onPressed: () {
+										ScaffoldMessenger.of(context).showSnackBar(
+											const SnackBar(
+												content: Text('Редактирование записи скоро будет доступно'),
+											),
+										);
+									},
+									icon: const Icon(Icons.edit_outlined, size: 18),
+									label: const Text('Редактировать'),
+									style: OutlinedButton.styleFrom(
+										foregroundColor: AppColors.primary,
+										side: const BorderSide(color: AppColors.primary),
+										padding: const EdgeInsets.symmetric(vertical: 12),
+									),
+								),
+							),
+							const SizedBox(width: 10),
+							Expanded(
+								child: OutlinedButton.icon(
+									onPressed: () {
+										ScaffoldMessenger.of(context).showSnackBar(
+											const SnackBar(
+												content: Text('Удаление записи скоро будет доступно'),
+											),
+										);
+									},
+									icon: const Icon(Icons.delete_outline, size: 18),
+									label: const Text('Удалить'),
+									style: OutlinedButton.styleFrom(
+										foregroundColor: AppColors.error,
+										side: const BorderSide(color: AppColors.error),
+										padding: const EdgeInsets.symmetric(vertical: 12),
+									),
+								),
+							),
+						],
+					),
+				],
+			),
+		);
 	}
 }
 
@@ -424,7 +531,7 @@ class _ReviewItem extends StatelessWidget {
 								),
 							),
 						),
-						_StarRating(rating: review.rating),
+						_NumericReviewRating(rating: review.rating),
 					],
 				),
 				const SizedBox(height: 8),
@@ -456,24 +563,22 @@ class _ReviewItem extends StatelessWidget {
 	}
 }
 
-class _StarRating extends StatelessWidget {
-	const _StarRating({required this.rating});
+class _NumericReviewRating extends StatelessWidget {
+	const _NumericReviewRating({required this.rating});
 
-	final int rating;
+	final double rating;
 
 	@override
 	Widget build(BuildContext context) {
-		return Row(
-			mainAxisSize: MainAxisSize.min,
-			children: List.generate(5, (index) {
-				final isFilled = index < rating;
+		final color = appointmentRatingColor(rating);
 
-				return Icon(
-					isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
-					size: 14,
-					color: isFilled ? AppColors.primary : AppColors.textMuted,
-				);
-			}),
+		return Text(
+			formatAppointmentRating(rating),
+			style: TextStyle(
+				color: color,
+				fontSize: 15,
+				fontWeight: FontWeight.w700,
+			),
 		);
 	}
 }
