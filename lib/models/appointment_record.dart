@@ -85,6 +85,41 @@ String formatAppointmentRating(double rating) {
 	return clampedRating.toStringAsFixed(1);
 }
 
+String appointmentRatingLabel(double rating) {
+	if (rating >= 4.5) {
+		return 'Отличный';
+	}
+
+	if (rating >= 4) {
+		return 'Хороший';
+	}
+
+	if (rating >= 3) {
+		return 'Средний';
+	}
+
+	return 'Ненадёжный';
+}
+
+String formatReviewMonthYear(DateTime date) {
+	const monthLabels = [
+		'янв',
+		'фев',
+		'мар',
+		'апр',
+		'май',
+		'июн',
+		'июл',
+		'авг',
+		'сен',
+		'окт',
+		'ноя',
+		'дек',
+	];
+
+	return '${monthLabels[date.month - 1]} ${date.year}';
+}
+
 String formatServicePrice(int price) {
 	final text = price.toString();
 	final buffer = StringBuffer();

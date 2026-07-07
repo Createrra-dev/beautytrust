@@ -57,10 +57,6 @@ class AppointmentDetailScreen extends StatelessWidget {
 								child: Column(
 									crossAxisAlignment: CrossAxisAlignment.stretch,
 									children: [
-										_StatsRow(profile: profile, ratingColor: ratingColor),
-										const SizedBox(height: 16),
-										const Divider(color: AppColors.border, height: 1),
-										const SizedBox(height: 16),
 										_ReviewsSection(reviews: profile.reviews),
 										const SizedBox(height: 16),
 										_ReliabilityBanner(
@@ -139,82 +135,73 @@ class _ClientDataCard extends StatelessWidget {
 				borderRadius: BorderRadius.circular(16),
 				border: Border.all(color: AppColors.border),
 			),
-			child: Row(
-				crossAxisAlignment: CrossAxisAlignment.center,
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
-					Container(
-						decoration: BoxDecoration(
-							shape: BoxShape.circle,
-							border: Border.all(
-								color: AppColors.border,
-								width: 1.5,
-							),
-						),
-						child: CircleAvatar(
-							radius: 26,
-							backgroundColor: AppColors.surfaceElevated,
-							child: Text(
-								initials,
-								style: const TextStyle(
-									color: AppColors.textPrimary,
-									fontSize: 17,
-									fontWeight: FontWeight.w600,
-								),
-							),
-						),
-					),
-					const SizedBox(width: 12),
-					Expanded(
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							mainAxisSize: MainAxisSize.min,
-							children: [
-								Text(
-									appointment.clientName,
-									maxLines: 1,
-									overflow: TextOverflow.ellipsis,
-									style: const TextStyle(
-										color: AppColors.textPrimary,
-										fontSize: 16,
-										fontWeight: FontWeight.w600,
-									),
-								),
-								const SizedBox(height: 4),
-								Text(
-									profile.phone,
-									style: const TextStyle(
-										color: AppColors.textMuted,
-										fontSize: 14,
-									),
-								),
-							],
-						),
-					),
-					const SizedBox(width: 8),
-					Column(
-						crossAxisAlignment: CrossAxisAlignment.end,
-						mainAxisSize: MainAxisSize.min,
+					Row(
+						crossAxisAlignment: CrossAxisAlignment.center,
 						children: [
-							Text(
-								formatAppointmentRating(profile.reviewsAverage),
-								style: TextStyle(
-									color: ratingColor,
-									fontSize: 24,
-									fontWeight: FontWeight.w700,
-									height: 1,
+							Container(
+								decoration: BoxDecoration(
+									shape: BoxShape.circle,
+									border: Border.all(
+										color: AppColors.border,
+										width: 1.5,
+									),
+								),
+								child: CircleAvatar(
+									radius: 26,
+									backgroundColor: AppColors.surfaceElevated,
+									child: Text(
+										initials,
+										style: const TextStyle(
+											color: AppColors.textPrimary,
+											fontSize: 17,
+											fontWeight: FontWeight.w600,
+										),
+									),
 								),
 							),
-							const SizedBox(height: 4),
-							Text(
-								profile.ratingLabel,
-								style: TextStyle(
-									color: ratingColor,
-									fontSize: 14,
-									fontWeight: FontWeight.w600,
+							const SizedBox(width: 12),
+							Expanded(
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.start,
+									mainAxisSize: MainAxisSize.min,
+									children: [
+										Text(
+											appointment.clientName,
+											maxLines: 1,
+											overflow: TextOverflow.ellipsis,
+											style: const TextStyle(
+												color: AppColors.textPrimary,
+												fontSize: 16,
+												fontWeight: FontWeight.w600,
+											),
+										),
+										const SizedBox(height: 4),
+										Text(
+											profile.phone,
+											style: const TextStyle(
+												color: AppColors.textMuted,
+												fontSize: 14,
+											),
+										),
+									],
 								),
+							),
+							const SizedBox(width: 8),
+							_RatingWithBadge(
+								rating: profile.reviewsAverage,
+								label: profile.ratingLabel,
+								ratingFontSize: 24,
+								labelFontSize: 11,
 							),
 						],
 					),
+					const SizedBox(height: 14),
+					const Divider(color: AppColors.border, height: 1),
+					const SizedBox(height: 14),
+					_StatsRow(profile: profile, ratingColor: ratingColor),
 				],
 			),
 		);
@@ -531,7 +518,7 @@ class _ReviewItem extends StatelessWidget {
 								),
 							),
 						),
-						_NumericReviewRating(rating: review.rating),
+						_ReviewRatingMeta(review: review),
 					],
 				),
 				const SizedBox(height: 8),
@@ -543,41 +530,112 @@ class _ReviewItem extends StatelessWidget {
 						height: 1.4,
 					),
 				),
-				const SizedBox(height: 8),
-				Container(
-					padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-					decoration: BoxDecoration(
-						color: AppColors.surfaceElevated,
-						borderRadius: BorderRadius.circular(8),
-					),
-					child: Text(
-						review.tag,
+			],
+		);
+	}
+}
+
+class _ReviewRatingMeta extends StatelessWidget {
+	const _ReviewRatingMeta({required this.review});
+
+	final MasterReview review;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.end,
+			mainAxisSize: MainAxisSize.min,
+			children: [
+				_RatingWithBadge(
+					rating: review.rating,
+					label: review.tag,
+					ratingFontSize: 15,
+					labelFontSize: 10,
+				),
+				if (review.ratedAt != null) ...[
+					const SizedBox(height: 4),
+					Text(
+						formatReviewMonthYear(review.ratedAt!),
 						style: const TextStyle(
 							color: AppColors.textMuted,
-							fontSize: 11,
+							fontSize: 10,
+							height: 1.2,
 						),
 					),
+				],
+			],
+		);
+	}
+}
+
+class _RatingWithBadge extends StatelessWidget {
+	const _RatingWithBadge({
+		required this.rating,
+		required this.label,
+		required this.ratingFontSize,
+		required this.labelFontSize,
+	});
+
+	final double rating;
+	final String label;
+	final double ratingFontSize;
+	final double labelFontSize;
+
+	@override
+	Widget build(BuildContext context) {
+		final color = appointmentRatingColor(rating);
+
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.end,
+			mainAxisSize: MainAxisSize.min,
+			children: [
+				Text(
+					formatAppointmentRating(rating),
+					style: TextStyle(
+						color: color,
+						fontSize: ratingFontSize,
+						fontWeight: FontWeight.w700,
+						height: 1,
+					),
+				),
+				const SizedBox(height: 4),
+				_TextBadge(
+					label: label,
+					color: color,
+					fontSize: labelFontSize,
 				),
 			],
 		);
 	}
 }
 
-class _NumericReviewRating extends StatelessWidget {
-	const _NumericReviewRating({required this.rating});
+class _TextBadge extends StatelessWidget {
+	const _TextBadge({
+		required this.label,
+		required this.color,
+		required this.fontSize,
+	});
 
-	final double rating;
+	final String label;
+	final Color color;
+	final double fontSize;
 
 	@override
 	Widget build(BuildContext context) {
-		final color = appointmentRatingColor(rating);
-
-		return Text(
-			formatAppointmentRating(rating),
-			style: TextStyle(
-				color: color,
-				fontSize: 15,
-				fontWeight: FontWeight.w700,
+		return Container(
+			padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+			decoration: BoxDecoration(
+				borderRadius: BorderRadius.circular(10),
+				border: Border.all(color: color.withValues(alpha: 0.55)),
+			),
+			child: Text(
+				label,
+				style: TextStyle(
+					color: color,
+					fontSize: fontSize,
+					fontWeight: FontWeight.w600,
+					height: 1.2,
+				),
 			),
 		);
 	}

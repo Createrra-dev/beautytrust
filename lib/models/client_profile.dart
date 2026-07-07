@@ -4,12 +4,14 @@ class MasterReview {
 		required this.rating,
 		required this.text,
 		required this.tag,
+		this.ratedAt,
 	});
 
 	final String masterName;
 	final double rating;
 	final String text;
 	final String tag;
+	final DateTime? ratedAt;
 }
 
 class ClientProfile {
