@@ -54,7 +54,7 @@ class AppointmentCard extends StatelessWidget {
 											),
 											const SizedBox(height: 6),
 											Text(
-												'${appointment.serviceName} · ${appointment.timeLabel} · ${formatServicePrice(appointment.servicePrice)}',
+												'${appointment.serviceName} · ${formatServicePrice(appointment.servicePrice)}',
 												maxLines: 2,
 												overflow: TextOverflow.ellipsis,
 												style: const TextStyle(
