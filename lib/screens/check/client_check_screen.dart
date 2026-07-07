@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/client_check_result.dart';
+import '../../navigation/main_shell_navigation.dart';
 import '../../services/client_profile_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
@@ -84,11 +85,24 @@ class _ClientCheckScreenState extends State<ClientCheckScreen> {
 			return;
 		}
 
-		AppSnackBar.show(
-			context,
-			'Клиент записан',
-			type: AppSnackBarType.success,
-		);
+		setState(() {
+			_result = null;
+			_errorText = null;
+		});
+
+		MainShellNavigation.instance.goToHome();
+
+		WidgetsBinding.instance.addPostFrameCallback((_) {
+			if (!mounted) {
+				return;
+			}
+
+			AppSnackBar.show(
+				context,
+				'Клиент записан',
+				type: AppSnackBarType.success,
+			);
+		});
 	}
 
 	@override

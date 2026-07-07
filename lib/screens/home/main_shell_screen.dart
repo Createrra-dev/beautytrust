@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:motion_tab_bar/MotionTabBarController.dart';
 
+import '../../navigation/main_shell_navigation.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
 import '../community/community_tab_navigator.dart';
@@ -28,10 +29,18 @@ class _MainShellScreenState extends State<MainShellScreen>
 			length: AppBottomNavigation.tabLabels.length,
 			vsync: this,
 		);
+		MainShellNavigation.instance.register(_selectTab);
+	}
+
+	void _selectTab(int index) {
+		setState(() {
+			_motionTabBarController.index = index;
+		});
 	}
 
 	@override
 	void dispose() {
+		MainShellNavigation.instance.unregister();
 		_motionTabBarController.dispose();
 		super.dispose();
 	}
@@ -54,11 +63,7 @@ class _MainShellScreenState extends State<MainShellScreen>
 			),
 			bottomNavigationBar: AppBottomNavigation(
 				controller: _motionTabBarController,
-				onTabSelected: (index) {
-					setState(() {
-						_motionTabBarController.index = index;
-					});
-				},
+				onTabSelected: _selectTab,
 			),
 		);
 	}
