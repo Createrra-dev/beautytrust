@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:motion_tab_bar/MotionTabBarController.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_background.dart';
@@ -12,29 +13,50 @@ class MainShellScreen extends StatefulWidget {
 	State<MainShellScreen> createState() => _MainShellScreenState();
 }
 
-class _MainShellScreenState extends State<MainShellScreen> {
-	var _currentTab = AppTab.profile;
+class _MainShellScreenState extends State<MainShellScreen>
+		with SingleTickerProviderStateMixin {
+	late final MotionTabBarController _motionTabBarController;
+
+	@override
+	void initState() {
+		super.initState();
+		_motionTabBarController = MotionTabBarController(
+			initialIndex: 0,
+			length: AppBottomNavigation.tabLabels.length,
+			vsync: this,
+		);
+	}
+
+	@override
+	void dispose() {
+		_motionTabBarController.dispose();
+		super.dispose();
+	}
 
 	@override
 	Widget build(BuildContext context) {
 		return Scaffold(
 			body: BrandBackground(
-				child: _buildBody(),
+				child: TabBarView(
+					physics: const NeverScrollableScrollPhysics(),
+					controller: _motionTabBarController,
+					children: const [
+						ProfileTabNavigator(),
+						_PlaceholderTab(title: 'Проверка'),
+						_PlaceholderTab(title: 'История'),
+						_PlaceholderTab(title: 'Сообщество'),
+					],
+				),
 			),
 			bottomNavigationBar: AppBottomNavigation(
-				currentTab: _currentTab,
-				onTabSelected: (tab) => setState(() => _currentTab = tab),
+				controller: _motionTabBarController,
+				onTabSelected: (index) {
+					setState(() {
+						_motionTabBarController.index = index;
+					});
+				},
 			),
 		);
-	}
-
-	Widget _buildBody() {
-		return switch (_currentTab) {
-			AppTab.check => const _PlaceholderTab(title: 'Проверка'),
-			AppTab.history => const _PlaceholderTab(title: 'История'),
-			AppTab.community => const _PlaceholderTab(title: 'Сообщество'),
-			AppTab.profile => const ProfileTabNavigator(),
-		};
 	}
 }
 
