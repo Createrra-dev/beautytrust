@@ -29,7 +29,7 @@ class AppointmentCard extends StatelessWidget {
 						border: Border.all(color: AppColors.border),
 					),
 					child: Padding(
-						padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+						padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
 						child: Row(
 							crossAxisAlignment: CrossAxisAlignment.center,
 							children: [
@@ -37,73 +37,56 @@ class AppointmentCard extends StatelessWidget {
 									timeLabel: appointment.timeLabel,
 									dateLabel: appointment.dateLabel,
 								),
-								const SizedBox(width: 10),
+								const SizedBox(width: 8),
 								Expanded(
 									child: Column(
+										crossAxisAlignment: CrossAxisAlignment.start,
 										mainAxisSize: MainAxisSize.min,
 										children: [
-											_CompactInfoRow(
-												left: Text(
-													appointment.clientName,
-													maxLines: 1,
-													overflow: TextOverflow.ellipsis,
-													style: const TextStyle(
-														color: AppColors.textPrimary,
-														fontSize: 15,
-														fontWeight: FontWeight.w600,
-														height: 1.2,
-													),
-												),
-												right: _RatingBadge(
-													rating: appointment.clientRating,
-													color: ratingColor,
+											Text(
+												appointment.clientName,
+												maxLines: 1,
+												overflow: TextOverflow.ellipsis,
+												style: const TextStyle(
+													color: AppColors.textPrimary,
+													fontSize: 15,
+													fontWeight: FontWeight.w600,
+													height: 1.2,
 												),
 											),
 											const SizedBox(height: 4),
-											_CompactInfoRow(
-												left: Text(
-													appointment.serviceName,
-													maxLines: 1,
-													overflow: TextOverflow.ellipsis,
-													style: const TextStyle(
-														color: AppColors.textMuted,
-														fontSize: 12,
-														height: 1.2,
-													),
-												),
-												right: _RiskBadge(
-													label: appointment.riskLabel,
-													color: riskColor,
+											Text(
+												appointment.serviceName,
+												maxLines: 1,
+												overflow: TextOverflow.ellipsis,
+												style: const TextStyle(
+													color: AppColors.textMuted,
+													fontSize: 12,
+													height: 1.2,
 												),
 											),
 											const SizedBox(height: 4),
-											_CompactInfoRow(
-												left: Text(
-													appointment.priceLineLabel,
-													maxLines: 1,
-													overflow: TextOverflow.ellipsis,
-													style: const TextStyle(
-														color: AppColors.textMuted,
-														fontSize: 12,
-														height: 1.2,
-													),
-												),
-												right: Text(
-													appointment.verifiedLabel,
-													maxLines: 1,
-													overflow: TextOverflow.ellipsis,
-													textAlign: TextAlign.right,
-													style: const TextStyle(
-														color: AppColors.textMuted,
-														fontSize: 11,
-														height: 1.2,
-													),
+											Text(
+												appointment.priceLineLabel,
+												maxLines: 1,
+												overflow: TextOverflow.ellipsis,
+												style: const TextStyle(
+													color: AppColors.textMuted,
+													fontSize: 12,
+													height: 1.2,
 												),
 											),
 										],
 									),
 								),
-								const SizedBox(width: 2),
+								const SizedBox(width: 6),
+								_MetaColumn(
+									rating: appointment.clientRating,
+									ratingColor: ratingColor,
+									riskLabel: appointment.riskLabel,
+									riskColor: riskColor,
+									verifiedLabel: appointment.verifiedLabel,
+								),
 								const Icon(
 									Icons.chevron_right_rounded,
 									color: AppColors.textMuted,
@@ -138,13 +121,15 @@ class _ScheduleColumn extends StatelessWidget {
 	@override
 	Widget build(BuildContext context) {
 		return SizedBox(
-			width: 44,
+			width: 52,
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.start,
 				mainAxisSize: MainAxisSize.min,
 				children: [
 					Text(
 						timeLabel,
+						maxLines: 1,
+						softWrap: false,
 						style: const TextStyle(
 							color: AppColors.primary,
 							fontSize: 15,
@@ -155,6 +140,9 @@ class _ScheduleColumn extends StatelessWidget {
 					const SizedBox(height: 2),
 					Text(
 						dateLabel,
+						maxLines: 1,
+						softWrap: false,
+						overflow: TextOverflow.ellipsis,
 						style: const TextStyle(
 							color: AppColors.textMuted,
 							fontSize: 11,
@@ -167,27 +155,53 @@ class _ScheduleColumn extends StatelessWidget {
 	}
 }
 
-class _CompactInfoRow extends StatelessWidget {
-	const _CompactInfoRow({
-		required this.left,
-		required this.right,
+class _MetaColumn extends StatelessWidget {
+	const _MetaColumn({
+		required this.rating,
+		required this.ratingColor,
+		required this.riskLabel,
+		required this.riskColor,
+		required this.verifiedLabel,
 	});
 
-	final Widget left;
-	final Widget right;
+	final double rating;
+	final Color ratingColor;
+	final String riskLabel;
+	final Color riskColor;
+	final String verifiedLabel;
 
 	@override
 	Widget build(BuildContext context) {
-		return Row(
-			crossAxisAlignment: CrossAxisAlignment.center,
-			children: [
-				Expanded(child: left),
-				const SizedBox(width: 8),
-				Flexible(
-					fit: FlexFit.loose,
-					child: right,
-				),
-			],
+		return SizedBox(
+			width: 104,
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.end,
+				mainAxisSize: MainAxisSize.min,
+				children: [
+					_RatingBadge(
+						rating: rating,
+						color: ratingColor,
+					),
+					const SizedBox(height: 4),
+					_RiskBadge(
+						label: riskLabel,
+						color: riskColor,
+					),
+					const SizedBox(height: 4),
+					Text(
+						verifiedLabel,
+						maxLines: 1,
+						softWrap: false,
+						overflow: TextOverflow.ellipsis,
+						textAlign: TextAlign.right,
+						style: const TextStyle(
+							color: AppColors.textMuted,
+							fontSize: 11,
+							height: 1.2,
+						),
+					),
+				],
+			),
 		);
 	}
 }
