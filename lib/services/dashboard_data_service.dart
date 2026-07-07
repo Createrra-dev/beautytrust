@@ -36,25 +36,37 @@ class DashboardDataService {
 	static List<AppointmentRecord> currentAppointments() {
 		return const [
 			AppointmentRecord(
+				id: '1',
 				clientName: 'Анна Петрова',
 				serviceName: 'Маникюр',
 				timeLabel: '14:00',
 				dateLabel: 'Сегодня',
-				status: AppointmentStatus.confirmed,
+				servicePrice: 2500,
+				clientRating: 4.8,
+				riskLevel: AppointmentRiskLevel.low,
+				lastChecked: AppointmentLastChecked.today,
 			),
 			AppointmentRecord(
+				id: '2',
 				clientName: 'Мария Иванова',
 				serviceName: 'Стрижка и укладка',
 				timeLabel: '16:30',
 				dateLabel: 'Сегодня',
-				status: AppointmentStatus.pendingVerification,
+				servicePrice: 3200,
+				clientRating: 3.4,
+				riskLevel: AppointmentRiskLevel.medium,
+				lastChecked: AppointmentLastChecked.oneDayAgo,
 			),
 			AppointmentRecord(
+				id: '3',
 				clientName: 'Екатерина Смирнова',
 				serviceName: 'Окрашивание',
 				timeLabel: '11:00',
 				dateLabel: 'Завтра',
-				status: AppointmentStatus.atRisk,
+				servicePrice: 5800,
+				clientRating: 2.3,
+				riskLevel: AppointmentRiskLevel.high,
+				lastChecked: AppointmentLastChecked.threeDaysAgo,
 			),
 		];
 	}

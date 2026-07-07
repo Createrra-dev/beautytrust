@@ -13,6 +13,7 @@ class AppColors {
 	static const border = Color(0xFF2F2F3A);
 	static const keypadPlate = Color(0xFF2A2A35);
 	static const error = Color(0xFFF87171);
+	static const warning = Color(0xFFFBBF24);
 
 	static const brandGradient = LinearGradient(
 		begin: Alignment.centerLeft,
