@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:motion_tab_bar/MotionTabBarController.dart';
 
-import '../../theme/app_theme.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
+import '../community/community_tab_navigator.dart';
 import '../check/check_tab_navigator.dart';
 import '../history/history_tab_navigator.dart';
 import '../profile/profile_tab_navigator.dart';
@@ -45,7 +45,7 @@ class _MainShellScreenState extends State<MainShellScreen>
 					controller: _motionTabBarController,
 					children: const [
 						CheckTabNavigator(),
-						_PlaceholderTab(title: 'Сообщество'),
+						CommunityTabNavigator(),
 						HomeTabNavigator(),
 						HistoryTabNavigator(),
 						ProfileTabNavigator(),
@@ -59,28 +59,6 @@ class _MainShellScreenState extends State<MainShellScreen>
 						_motionTabBarController.index = index;
 					});
 				},
-			),
-		);
-	}
-}
-
-class _PlaceholderTab extends StatelessWidget {
-	const _PlaceholderTab({required this.title});
-
-	final String title;
-
-	@override
-	Widget build(BuildContext context) {
-		return SafeArea(
-			child: Center(
-				child: Text(
-					title,
-					style: const TextStyle(
-						color: AppColors.textMuted,
-						fontSize: 18,
-						fontWeight: FontWeight.w500,
-					),
-				),
 			),
 		);
 	}
