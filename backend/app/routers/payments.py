@@ -16,6 +16,14 @@ class InitPaymentRequest(BaseModel):
 		default=None,
 		description="URL бэкенда, доступный с устройства (для SuccessURL/FailURL)",
 	)
+	amount: int | None = Field(
+		default=None,
+		description="Сумма платежа в копейках",
+	)
+	description: str | None = Field(
+		default=None,
+		description="Описание платежа для T-Bank",
+	)
 
 
 class InitPaymentResponse(BaseModel):
@@ -69,11 +77,16 @@ async def init_payment(body: InitPaymentRequest | None = None) -> InitPaymentRes
 		body.return_base_url if body else None,
 	)
 	order_id = f"order-{uuid4().hex[:16]}"
-	description = "Тестовая оплата 10 ₽"
+	amount = body.amount if body and body.amount else settings.payment_amount_kopecks
+	description = (
+		body.description
+		if body and body.description
+		else "Тестовая оплата 10 ₽"
+	)
 
 	attempt = payment_service.repository.create_attempt(
 		order_id=order_id,
-		amount=settings.payment_amount_kopecks,
+		amount=amount,
 		description=description,
 		status="INIT_PENDING",
 	)
@@ -82,6 +95,7 @@ async def init_payment(body: InitPaymentRequest | None = None) -> InitPaymentRes
 		result = await payment_service.init_payment(
 			order_id=order_id,
 			description=description,
+			amount=amount,
 			success_url=f"{return_base_url}/payments/return/success",
 			fail_url=f"{return_base_url}/payments/return/fail",
 		)
@@ -119,7 +133,7 @@ async def init_payment(body: InitPaymentRequest | None = None) -> InitPaymentRes
 		payment_id=str(payment_id),
 		payment_url=str(payment_url),
 		order_id=str(result.get("OrderId") or order_id),
-		amount=settings.payment_amount_kopecks,
+		amount=amount,
 	)
 
 

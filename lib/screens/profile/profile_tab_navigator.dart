@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/tariff_payment_summary.dart';
 import '../../models/tariff_plan.dart';
 import 'master_profile_screen.dart';
 import 'tariff_detail_screen.dart';
@@ -38,7 +39,7 @@ class ProfileTabNavigator extends StatelessWidget {
 						return MaterialPageRoute(
 							settings: settings,
 							builder: (context) => TariffSuccessScreen(
-								plan: settings.arguments! as TariffPlan,
+								summary: settings.arguments! as TariffPaymentSummary,
 							),
 						);
 					default:

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/tariff_plans_data.dart';
 import '../../models/tariff_plan.dart';
+import '../../services/tariff_pricing_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/profile/tariff_plan_card.dart';
 import '../../widgets/profile/tariff_segment_switch.dart';
@@ -66,7 +67,10 @@ class _TariffsScreenState extends State<TariffsScreen> {
 		if (plan.monthlyPrice == 0) {
 			Navigator.of(context).pushNamed(
 				TariffSuccessScreen.routeName,
-				arguments: plan,
+				arguments: TariffPricingService.buildSummary(
+					plan: plan,
+					months: 1,
+				),
 			);
 			return;
 		}

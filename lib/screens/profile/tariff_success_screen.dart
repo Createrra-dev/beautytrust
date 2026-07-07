@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 
-import '../../models/tariff_plan.dart';
+import '../../models/tariff_payment_summary.dart';
 import '../../theme/app_theme.dart';
 
 class TariffSuccessScreen extends StatelessWidget {
 	const TariffSuccessScreen({
 		super.key,
-		required this.plan,
+		required this.summary,
 	});
 
 	static const routeName = '/tariff-success';
 
-	final TariffPlan plan;
+	final TariffPaymentSummary summary;
 
 	@override
 	Widget build(BuildContext context) {
-		final activeUntil = DateTime.now().add(const Duration(days: 30));
+		final activeUntil = DateTime.now().add(Duration(days: summary.months * 30));
 		final activeUntilLabel =
 			'${activeUntil.day.toString().padLeft(2, '0')}.'
 			'${activeUntil.month.toString().padLeft(2, '0')}.'
@@ -77,7 +77,7 @@ class TariffSuccessScreen extends StatelessWidget {
 							child: Column(
 								children: [
 									Text(
-										'Тариф ${plan.title}',
+										'Тариф ${summary.plan.title}',
 										style: const TextStyle(
 											color: AppColors.textPrimary,
 											fontSize: 16,

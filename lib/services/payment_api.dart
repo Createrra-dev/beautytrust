@@ -70,13 +70,27 @@ class PaymentApi {
 
 	Uri get _baseUri => Uri.parse(AppConfig.apiBaseUrl);
 
-	Future<PaymentInitResult> initPayment() async {
+	Future<PaymentInitResult> initPayment({
+		int? amountKopecks,
+		String? description,
+		String? returnBaseUrl,
+	}) async {
+		final body = <String, dynamic>{
+			'return_base_url': returnBaseUrl ?? AppConfig.apiBaseUrl,
+		};
+
+		if (amountKopecks != null) {
+			body['amount'] = amountKopecks;
+		}
+
+		if (description != null) {
+			body['description'] = description;
+		}
+
 		final response = await _client.post(
 			_baseUri.replace(path: '/api/payments/init'),
 			headers: {'Content-Type': 'application/json'},
-			body: jsonEncode({
-				'return_base_url': AppConfig.apiBaseUrl,
-			}),
+			body: jsonEncode(body),
 		);
 
 		if (response.statusCode >= 200 && response.statusCode < 300) {
