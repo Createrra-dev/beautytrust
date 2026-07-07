@@ -23,7 +23,6 @@ class AppointmentRecord {
 		required this.clientRating,
 		required this.riskLevel,
 		required this.lastChecked,
-		this.avatarUrl,
 	});
 
 	final String id;
@@ -35,7 +34,6 @@ class AppointmentRecord {
 	final double clientRating;
 	final AppointmentRiskLevel riskLevel;
 	final AppointmentLastChecked lastChecked;
-	final String? avatarUrl;
 
 	String get riskLabel {
 		return switch (riskLevel) {
@@ -51,19 +49,6 @@ class AppointmentRecord {
 			AppointmentLastChecked.oneDayAgo => '1 день назад',
 			AppointmentLastChecked.threeDaysAgo => '3 дня назад',
 		};
-	}
-
-	String get initials {
-		final parts = clientName.trim().split(RegExp(r'\s+'));
-		if (parts.isEmpty) {
-			return '?';
-		}
-
-		if (parts.length == 1) {
-			return parts.first.substring(0, 1).toUpperCase();
-		}
-
-		return '${parts.first.substring(0, 1)}${parts[1].substring(0, 1)}'.toUpperCase();
 	}
 }
 

@@ -38,8 +38,6 @@ class AppointmentCard extends StatelessWidget {
 									dateLabel: appointment.dateLabel,
 								),
 								const SizedBox(width: 12),
-								_ClientAvatar(appointment: appointment),
-								const SizedBox(width: 12),
 								Expanded(
 									child: Column(
 										crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,36 +149,6 @@ class _ScheduleColumn extends StatelessWidget {
 						),
 					),
 				],
-			),
-		);
-	}
-}
-
-class _ClientAvatar extends StatelessWidget {
-	const _ClientAvatar({required this.appointment});
-
-	final AppointmentRecord appointment;
-
-	@override
-	Widget build(BuildContext context) {
-		if (appointment.avatarUrl != null) {
-			return CircleAvatar(
-				radius: 22,
-				backgroundColor: AppColors.surfaceElevated,
-				backgroundImage: NetworkImage(appointment.avatarUrl!),
-			);
-		}
-
-		return CircleAvatar(
-			radius: 22,
-			backgroundColor: AppColors.surfaceElevated,
-			child: Text(
-				appointment.initials,
-				style: const TextStyle(
-					color: AppColors.textPrimary,
-					fontSize: 14,
-					fontWeight: FontWeight.w600,
-				),
 			),
 		);
 	}
