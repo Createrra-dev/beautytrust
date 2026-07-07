@@ -4,6 +4,7 @@ import 'package:motion_tab_bar/MotionTabBarController.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
+import '../history/history_tab_navigator.dart';
 import 'home_tab_navigator.dart';
 
 class MainShellScreen extends StatefulWidget {
@@ -42,7 +43,7 @@ class _MainShellScreenState extends State<MainShellScreen>
 					controller: _motionTabBarController,
 					children: const [
 						_PlaceholderTab(title: 'Проверка'),
-						_PlaceholderTab(title: 'История'),
+						HistoryTabNavigator(),
 						HomeTabNavigator(),
 						_PlaceholderTab(title: 'Сообщество'),
 						_PlaceholderTab(title: 'Профиль'),

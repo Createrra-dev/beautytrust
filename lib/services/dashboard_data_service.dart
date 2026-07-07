@@ -158,6 +158,16 @@ class DashboardDataService {
 		];
 	}
 
+	static AppointmentRecord? appointmentById(String id) {
+		for (final appointment in currentAppointments()) {
+			if (appointment.id == id) {
+				return appointment;
+			}
+		}
+
+		return null;
+	}
+
 	static String _periodKey(DashboardPeriod period) {
 		return '${period.year}-${period.month}';
 	}
