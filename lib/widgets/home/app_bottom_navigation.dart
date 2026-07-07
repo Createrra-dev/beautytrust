@@ -15,35 +15,39 @@ class AppBottomNavigation extends StatelessWidget {
 	final ValueChanged<int> onTabSelected;
 
 	static const tabLabels = [
+		'Сообщество',
 		'Профиль',
+		'Home',
 		'Проверка',
 		'История',
-		'Сообщество',
 	];
+
+	static const homeTabIndex = 2;
 
 	@override
 	Widget build(BuildContext context) {
 		return MotionTabBar(
 			controller: controller,
-			initialSelectedTab: tabLabels.first,
+			initialSelectedTab: tabLabels[homeTabIndex],
 			labels: tabLabels,
 			icons: const [
+				Icons.people_outline_rounded,
 				Icons.person_outline_rounded,
+				Icons.home_outlined,
 				Icons.verified_user_outlined,
 				Icons.schedule_outlined,
-				Icons.people_outline_rounded,
 			],
 			tabBarColor: AppColors.surface,
 			tabBarHeight: 62,
-			tabSize: 52,
+			tabSize: 48,
 			tabIconColor: AppColors.textMuted,
-			tabIconSize: 24,
-			tabIconSelectedSize: 22,
+			tabIconSize: 22,
+			tabIconSelectedSize: 20,
 			tabSelectedColor: AppColors.primary,
 			tabIconSelectedColor: AppColors.textPrimary,
 			textStyle: const TextStyle(
 				color: AppColors.textPrimary,
-				fontSize: 11,
+				fontSize: 10,
 				fontWeight: FontWeight.w600,
 			),
 			useSafeArea: true,

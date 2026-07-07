@@ -4,7 +4,7 @@ import 'package:motion_tab_bar/MotionTabBarController.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
-import 'profile_tab_navigator.dart';
+import 'home_tab_navigator.dart';
 
 class MainShellScreen extends StatefulWidget {
 	const MainShellScreen({super.key});
@@ -21,7 +21,7 @@ class _MainShellScreenState extends State<MainShellScreen>
 	void initState() {
 		super.initState();
 		_motionTabBarController = MotionTabBarController(
-			initialIndex: 0,
+			initialIndex: AppBottomNavigation.homeTabIndex,
 			length: AppBottomNavigation.tabLabels.length,
 			vsync: this,
 		);
@@ -41,10 +41,11 @@ class _MainShellScreenState extends State<MainShellScreen>
 					physics: const NeverScrollableScrollPhysics(),
 					controller: _motionTabBarController,
 					children: const [
-						ProfileTabNavigator(),
+						_PlaceholderTab(title: 'Сообщество'),
+						_PlaceholderTab(title: 'Профиль'),
+						HomeTabNavigator(),
 						_PlaceholderTab(title: 'Проверка'),
 						_PlaceholderTab(title: 'История'),
-						_PlaceholderTab(title: 'Сообщество'),
 					],
 				),
 			),

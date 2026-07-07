@@ -4,8 +4,8 @@ import '../../models/appointment_record.dart';
 import '../appointments/appointment_detail_screen.dart';
 import 'home_screen.dart';
 
-class ProfileTabNavigator extends StatelessWidget {
-	const ProfileTabNavigator({super.key});
+class HomeTabNavigator extends StatelessWidget {
+	const HomeTabNavigator({super.key});
 
 	@override
 	Widget build(BuildContext context) {
