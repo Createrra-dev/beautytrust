@@ -11,6 +11,27 @@ class MasterReviewSchema(BaseModel):
 	review_year: int
 
 
+class ReceivedMasterReviewSchema(BaseModel):
+	id: int
+	author_name: str
+	rating: float
+	text: str
+	review_month: int
+	review_year: int
+
+
+class MasterSettingsSchema(BaseModel):
+	push_notifications_enabled: bool = True
+	email_notifications_enabled: bool = True
+	marketing_notifications_enabled: bool = False
+
+
+class MasterSettingsUpdateRequest(BaseModel):
+	push_notifications_enabled: bool | None = None
+	email_notifications_enabled: bool | None = None
+	marketing_notifications_enabled: bool | None = None
+
+
 class ClientProfileSchema(BaseModel):
 	phone: str
 	rating_label: str

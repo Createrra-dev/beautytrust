@@ -40,6 +40,25 @@ def seed_database(db: Session) -> None:
 	db.add(master)
 	db.flush()
 
+	received_reviews = [
+		("Екатерина", 5.0, "Отличный мастер, всегда пунктуальна и внимательна к деталям."),
+		("Мария", 4.7, "Приятная атмосфера, качественная работа."),
+		("Ольга", 4.9, "Рекомендую — профессионал своего дела."),
+		("Ирина", 4.5, "Хороший сервис, вернусь снова."),
+		("Светлана", 4.8, "Очень довольна результатом."),
+	]
+	for index, (author, rating, text) in enumerate(received_reviews):
+		db.add(
+			models.MasterReceivedReview(
+				master_id=master.id,
+				author_name=author,
+				rating=rating,
+				text=text,
+				review_month=6 - index if index < 6 else 1,
+				review_year=2026,
+			)
+		)
+
 	services = [
 		("Маникюр + покрытие", "2 ч", 2500),
 		("Стрижка и укладка", "1,5 ч", 3200),

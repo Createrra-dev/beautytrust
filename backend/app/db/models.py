@@ -26,6 +26,7 @@ class Master(Base):
 	tariff_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	avatar_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
 	onboarding_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	settings_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)
 	email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
 	password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -76,6 +77,19 @@ class MasterReview(Base):
 	review_year: Mapped[int] = mapped_column(Integer, nullable=False)
 
 	client_profile: Mapped[ClientProfile] = relationship(back_populates="reviews")
+
+
+class MasterReceivedReview(Base):
+	__tablename__ = "master_received_reviews"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	master_id: Mapped[int] = mapped_column(ForeignKey("masters.id"), index=True)
+	author_name: Mapped[str] = mapped_column(String(120), nullable=False)
+	rating: Mapped[float] = mapped_column(Float, nullable=False)
+	text: Mapped[str] = mapped_column(Text, nullable=False)
+	review_month: Mapped[int] = mapped_column(Integer, nullable=False)
+	review_year: Mapped[int] = mapped_column(Integer, nullable=False)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Appointment(Base):

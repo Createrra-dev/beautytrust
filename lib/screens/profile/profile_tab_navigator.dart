@@ -5,7 +5,10 @@ import '../../models/tariff_payment_summary.dart';
 import '../../models/tariff_plan.dart';
 import 'edit_profile_screen.dart';
 import 'master_profile_screen.dart';
+import 'master_reviews_screen.dart';
 import 'master_services_screen.dart';
+import 'profile_settings_screen.dart';
+import 'profile_stats_screen.dart';
 import '../support/create_support_ticket_screen.dart';
 import '../support/support_chat_screen.dart';
 import '../support/support_tickets_screen.dart';
@@ -32,6 +35,21 @@ class ProfileTabNavigator extends StatelessWidget {
 						return MaterialPageRoute(
 							settings: settings,
 							builder: (context) => const MasterServicesScreen(),
+						);
+					case ProfileStatsScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => const ProfileStatsScreen(),
+						);
+					case MasterReviewsScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => const MasterReviewsScreen(),
+						);
+					case ProfileSettingsScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => const ProfileSettingsScreen(),
 						);
 					case TariffsScreen.routeName:
 						return MaterialPageRoute(

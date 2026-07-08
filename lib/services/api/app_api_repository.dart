@@ -9,6 +9,8 @@ import '../../models/dashboard_period.dart';
 import '../../models/dashboard_stats.dart';
 import '../../models/master_profile.dart';
 import '../../models/master_service.dart';
+import '../../models/master_settings.dart';
+import '../../models/profile_stats.dart';
 import '../../models/support_ticket.dart';
 import '../../models/tariff_plan.dart';
 import '../../models/visit_result.dart';
@@ -421,6 +423,56 @@ class AppApiRepository {
 		await _api.postJson('/api/profile/onboarding/complete', body: {});
 	}
 
+	Future<ProfileStats> fetchProfileStats() async {
+		final json = await _api.getJson('/api/profile/stats');
+		return ProfileStats(
+			appointmentsTotal: json['appointments_total'] as int,
+			appointmentsScheduled: json['appointments_scheduled'] as int,
+			appointmentsCompleted: json['appointments_completed'] as int,
+			appointmentsNoShow: json['appointments_no_show'] as int,
+			appointmentsCancelled: json['appointments_cancelled'] as int,
+			completionRate: (json['completion_rate'] as num).toDouble(),
+			avgClientRating: (json['avg_client_rating'] as num).toDouble(),
+			checksTotal: json['checks_total'] as int,
+			reviewsGiven: json['reviews_given'] as int,
+		);
+	}
+
+	Future<List<MasterReview>> fetchProfileReviews() async {
+		final items = await _api.getJsonList('/api/profile/reviews');
+		return items.map((item) {
+			final json = item as Map<String, dynamic>;
+			final rating = (json['rating'] as num).toDouble();
+			return MasterReview(
+				masterName: json['author_name'] as String,
+				rating: rating,
+				text: json['text'] as String,
+				tag: appointmentRatingLabel(rating),
+				ratedAt: DateTime(
+					json['review_year'] as int,
+					json['review_month'] as int,
+				),
+			);
+		}).toList();
+	}
+
+	Future<MasterSettings> fetchProfileSettings() async {
+		final json = await _api.getJson('/api/profile/settings');
+		return _masterSettingsFromJson(json);
+	}
+
+	Future<MasterSettings> updateProfileSettings(MasterSettings settings) async {
+		final json = await _api.patchJson(
+			'/api/profile/settings',
+			body: {
+				'push_notifications_enabled': settings.pushNotificationsEnabled,
+				'email_notifications_enabled': settings.emailNotificationsEnabled,
+				'marketing_notifications_enabled': settings.marketingNotificationsEnabled,
+			},
+		);
+		return _masterSettingsFromJson(json);
+	}
+
 	Future<MasterProfile> updateProfile({
 		String? firstName,
 		String? email,
@@ -609,6 +661,15 @@ class AppApiRepository {
 			'late' => VisitPunctuality.late,
 			_ => VisitPunctuality.noShow,
 		};
+	}
+
+	MasterSettings _masterSettingsFromJson(Map<String, dynamic> json) {
+		return MasterSettings(
+			pushNotificationsEnabled: json['push_notifications_enabled'] as bool? ?? true,
+			emailNotificationsEnabled: json['email_notifications_enabled'] as bool? ?? true,
+			marketingNotificationsEnabled:
+				json['marketing_notifications_enabled'] as bool? ?? false,
+		);
 	}
 
 	AppointmentRiskLevel _riskLevelFromApi(String value) {

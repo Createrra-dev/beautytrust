@@ -15,7 +15,10 @@ import '../../widgets/profile/profile_menu_item.dart';
 import '../auth/phone_login_screen.dart';
 import '../support/support_tickets_screen.dart';
 import 'edit_profile_screen.dart';
+import 'master_reviews_screen.dart';
 import 'master_services_screen.dart';
+import 'profile_settings_screen.dart';
+import 'profile_stats_screen.dart';
 import 'tariffs_screen.dart';
 
 class MasterProfileScreen extends StatefulWidget {
@@ -200,8 +203,18 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 			return;
 		}
 
+		if (item == MasterProfileMenuItem.statistics) {
+			Navigator.of(context).pushNamed(ProfileStatsScreen.routeName);
+			return;
+		}
+
+		if (item == MasterProfileMenuItem.reviews) {
+			Navigator.of(context).pushNamed(MasterReviewsScreen.routeName);
+			return;
+		}
+
 		if (item == MasterProfileMenuItem.settings) {
-			_openEditProfile();
+			Navigator.of(context).pushNamed(ProfileSettingsScreen.routeName);
 			return;
 		}
 

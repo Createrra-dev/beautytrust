@@ -31,12 +31,15 @@ from app.schemas.api import (
 	MasterProfileSchema,
 	MasterProfileUpdateRequest,
 	MasterReviewSchema,
+	MasterSettingsSchema,
+	MasterSettingsUpdateRequest,
 	MasterServiceCreateRequest,
 	MasterServiceSchema,
 	MasterServiceUpdateRequest,
 	NotificationSchema,
 	PhoneCheckRequest,
 	ProfileStatsSchema,
+	ReceivedMasterReviewSchema,
 	SupportMessageCreateRequest,
 	SupportTicketCreateRequest,
 	SupportTicketSchema,
@@ -51,6 +54,7 @@ from app.services.client_rating_service import (
 	sync_appointment_client_fields,
 )
 from app.services.cache_service import cache_delete_prefix, cache_get_json, cache_set_json
+from app.services.master_settings_service import load_master_settings, merge_master_settings
 from app.services.notification_service import notify_support_reply
 from app.services.password_service import normalize_email
 from app.services.uploads import avatar_url_for, uploads_root
@@ -573,6 +577,58 @@ async def get_profile_stats(
 		checks_total=int(checks_total),
 		reviews_given=int(reviews_given),
 	)
+
+
+@router.get("/profile/reviews", response_model=list[ReceivedMasterReviewSchema])
+async def list_profile_reviews(
+	limit: int = Query(default=50, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[ReceivedMasterReviewSchema]:
+	reviews = db.scalars(
+		select(models.MasterReceivedReview)
+		.where(models.MasterReceivedReview.master_id == master.id)
+		.order_by(
+			models.MasterReceivedReview.review_year.desc(),
+			models.MasterReceivedReview.review_month.desc(),
+			models.MasterReceivedReview.id.desc(),
+		)
+		.offset(offset)
+		.limit(limit)
+	).all()
+	return [
+		ReceivedMasterReviewSchema(
+			id=review.id,
+			author_name=review.author_name,
+			rating=review.rating,
+			text=review.text,
+			review_month=review.review_month,
+			review_year=review.review_year,
+		)
+		for review in reviews
+	]
+
+
+@router.get("/profile/settings", response_model=MasterSettingsSchema)
+async def get_profile_settings(
+	master: models.Master = Depends(get_current_master),
+) -> MasterSettingsSchema:
+	return MasterSettingsSchema(**load_master_settings(master))
+
+
+@router.patch("/profile/settings", response_model=MasterSettingsSchema)
+async def update_profile_settings(
+	body: MasterSettingsUpdateRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterSettingsSchema:
+	updates = body.model_dump(exclude_unset=True)
+	settings = merge_master_settings(master, updates)
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+	return MasterSettingsSchema(**settings)
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsSchema)
