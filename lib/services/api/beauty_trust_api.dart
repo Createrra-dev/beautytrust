@@ -90,6 +90,27 @@ class BeautyTrustApi {
 		throw ApiException(_extractError(response.body), statusCode: response.statusCode);
 	}
 
+	Future<Map<String, dynamic>> multipartPost(
+		String path, {
+		required String fieldName,
+		required String filePath,
+		String? filename,
+	}) async {
+		final request = http.MultipartRequest('POST', _uri(path));
+		request.headers.addAll(_headers());
+		request.files.add(
+			await http.MultipartFile.fromPath(
+				fieldName,
+				filePath,
+				filename: filename,
+			),
+		);
+
+		final streamed = await _client.send(request);
+		final response = await http.Response.fromStream(streamed);
+		return _decodeMap(response);
+	}
+
 	Map<String, dynamic> _decodeMap(http.Response response) {
 		if (response.statusCode >= 200 && response.statusCode < 300) {
 			return jsonDecode(response.body) as Map<String, dynamic>;

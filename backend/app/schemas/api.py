@@ -123,6 +123,13 @@ class MasterProfileSchema(BaseModel):
 	avatar_url: str | None = None
 	email: str | None = None
 	phone_digits: str | None = None
+	years_experience: int = 0
+
+
+class MasterProfileUpdateRequest(BaseModel):
+	first_name: str | None = None
+	email: str | None = None
+	badge_label: str | None = None
 
 
 class CommunityTopicSchema(BaseModel):

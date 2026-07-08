@@ -1,11 +1,11 @@
 from calendar import monthrange
 from datetime import datetime, timezone
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import and_, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.config import settings
 from app.db import models
 from app.db.session import get_db
 from app.deps.auth import get_current_master
@@ -24,6 +24,7 @@ from app.schemas.api import (
 	DashboardPeriodSchema,
 	DashboardStatsSchema,
 	MasterProfileSchema,
+	MasterProfileUpdateRequest,
 	MasterReviewSchema,
 	MasterServiceCreateRequest,
 	MasterServiceSchema,
@@ -34,6 +35,8 @@ from app.schemas.api import (
 	SupportTicketSchema,
 	VisitResultSchema,
 )
+from app.services.password_service import normalize_email
+from app.services.uploads import avatar_url_for, uploads_root
 
 _RU_MONTHS = (
 	"",
@@ -308,12 +311,48 @@ async def api_health() -> dict[str, str]:
 	return {"status": "ok", "service": "beautytrust-api"}
 
 
-@router.get("/profile", response_model=MasterProfileSchema)
-async def get_profile(master: models.Master = Depends(get_current_master)) -> MasterProfileSchema:
-	avatar_url = None
-	if master.avatar_path:
-		avatar_url = f"{settings.public_base_url.rstrip('/')}/uploads/{master.avatar_path}"
+def _years_experience(master: models.Master) -> int:
+	created = master.created_at
+	if created is None:
+		return 0
+	if created.tzinfo is None:
+		created = created.replace(tzinfo=timezone.utc)
+	days = max(0, (datetime.now(timezone.utc) - created).days)
+	return days // 365
 
+
+def _refresh_master_stats(db: Session, master: models.Master) -> None:
+	clients_count = db.scalar(
+		select(func.count(func.distinct(models.Appointment.client_phone_digits))).where(
+			models.Appointment.master_id == master.id,
+		)
+	) or 0
+
+	appointments = db.scalars(
+		select(models.Appointment)
+		.options(joinedload(models.Appointment.visit_result))
+		.where(models.Appointment.master_id == master.id)
+	).unique().all()
+
+	protected_income = 0
+	prevented_no_shows = 0
+	for appointment in appointments:
+		visit = appointment.visit_result
+		if visit is None or visit.punctuality == "noShow":
+			continue
+		protected_income += appointment.service_price
+		if appointment.risk_level == "high":
+			prevented_no_shows += 1
+
+	master.clients_count = int(clients_count)
+	master.protected_income = protected_income
+	master.prevented_no_shows = prevented_no_shows
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+
+
+def _master_profile_schema(master: models.Master) -> MasterProfileSchema:
 	return MasterProfileSchema(
 		first_name=master.first_name,
 		badge_label=master.badge_label,
@@ -323,10 +362,137 @@ async def get_profile(master: models.Master = Depends(get_current_master)) -> Ma
 		prevented_no_shows=master.prevented_no_shows,
 		protected_income=master.protected_income,
 		tariff_label=master.tariff_label,
-		avatar_url=avatar_url,
+		avatar_url=avatar_url_for(master),
 		email=master.email,
 		phone_digits=master.phone_digits,
+		years_experience=_years_experience(master),
 	)
+
+
+def _delete_avatar_file(relative_path: str | None) -> None:
+	if not relative_path:
+		return
+	file_path = uploads_root() / relative_path
+	if file_path.is_file():
+		file_path.unlink()
+
+
+@router.get("/profile", response_model=MasterProfileSchema)
+async def get_profile(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterProfileSchema:
+	_refresh_master_stats(db, master)
+	return _master_profile_schema(master)
+
+
+@router.patch("/profile", response_model=MasterProfileSchema)
+async def update_profile(
+	body: MasterProfileUpdateRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterProfileSchema:
+	if body.first_name is not None:
+		first_name = body.first_name.strip()
+		if len(first_name) < 2:
+			raise HTTPException(status_code=400, detail="Имя слишком короткое")
+		if len(first_name) > 120:
+			raise HTTPException(status_code=400, detail="Имя слишком длинное")
+		master.first_name = first_name
+
+	if body.badge_label is not None:
+		badge_label = body.badge_label.strip()
+		if not badge_label:
+			raise HTTPException(status_code=400, detail="Значок не может быть пустым")
+		if len(badge_label) > 120:
+			raise HTTPException(status_code=400, detail="Значок слишком длинный")
+		master.badge_label = badge_label
+
+	if body.email is not None:
+		try:
+			normalized = normalize_email(body.email)
+		except ValueError as error:
+			raise HTTPException(status_code=400, detail=str(error)) from error
+
+		if normalized is not None:
+			existing = db.scalar(
+				select(models.Master).where(
+					models.Master.email == normalized,
+					models.Master.id != master.id,
+				)
+			)
+			if existing is not None:
+				raise HTTPException(status_code=400, detail="Email уже занят")
+		master.email = normalized
+
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+	_refresh_master_stats(db, master)
+	return _master_profile_schema(master)
+
+
+@router.post("/profile/avatar", response_model=MasterProfileSchema)
+async def upload_profile_avatar(
+	file: UploadFile = File(...),
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterProfileSchema:
+	content_type = (file.content_type or "").lower()
+	allowed = {
+		"image/jpeg": ".jpg",
+		"image/jpg": ".jpg",
+		"image/png": ".png",
+		"image/webp": ".webp",
+	}
+	extension = allowed.get(content_type)
+	if extension is None:
+		filename = (file.filename or "").lower()
+		if filename.endswith(".png"):
+			extension = ".png"
+		elif filename.endswith(".webp"):
+			extension = ".webp"
+		elif filename.endswith(".jpg") or filename.endswith(".jpeg"):
+			extension = ".jpg"
+		else:
+			raise HTTPException(status_code=400, detail="Допустимы только JPEG, PNG или WebP")
+
+	payload = await file.read()
+	if not payload:
+		raise HTTPException(status_code=400, detail="Пустой файл")
+	if len(payload) > 5 * 1024 * 1024:
+		raise HTTPException(status_code=400, detail="Файл больше 5 МБ")
+
+	avatars_dir = uploads_root() / "avatars"
+	avatars_dir.mkdir(parents=True, exist_ok=True)
+	relative_path = f"avatars/master_{master.id}_{uuid4().hex}{extension}"
+	target = uploads_root() / relative_path
+	target.write_bytes(payload)
+
+	previous = master.avatar_path
+	master.avatar_path = relative_path
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+
+	if previous and previous != relative_path:
+		_delete_avatar_file(previous)
+
+	return _master_profile_schema(master)
+
+
+@router.delete("/profile/avatar", response_model=MasterProfileSchema)
+async def delete_profile_avatar(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterProfileSchema:
+	previous = master.avatar_path
+	master.avatar_path = None
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+	_delete_avatar_file(previous)
+	return _master_profile_schema(master)
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsSchema)

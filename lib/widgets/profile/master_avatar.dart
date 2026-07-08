@@ -9,6 +9,7 @@ class MasterAvatar extends StatelessWidget {
 		super.key,
 		required this.firstName,
 		this.avatarPath,
+		this.avatarUrl,
 		this.radius = 44,
 		this.onTap,
 		this.isLoading = false,
@@ -16,13 +17,16 @@ class MasterAvatar extends StatelessWidget {
 
 	final String firstName;
 	final String? avatarPath;
+	final String? avatarUrl;
 	final double radius;
 	final VoidCallback? onTap;
 	final bool isLoading;
 
 	@override
 	Widget build(BuildContext context) {
-		final avatar = GestureDetector(
+		final imageProvider = _imageProvider();
+
+		return GestureDetector(
 			onTap: isLoading ? null : onTap,
 			child: Stack(
 				clipBehavior: Clip.none,
@@ -38,8 +42,8 @@ class MasterAvatar extends StatelessWidget {
 						child: CircleAvatar(
 							radius: radius,
 							backgroundColor: AppColors.surfaceElevated,
-							backgroundImage: _avatarImage(),
-							child: _avatarImage() == null
+							backgroundImage: imageProvider,
+							child: imageProvider == null
 								? Text(
 									_firstLetter(firstName),
 									style: TextStyle(
@@ -95,22 +99,23 @@ class MasterAvatar extends StatelessWidget {
 				],
 			),
 		);
-
-		return avatar;
 	}
 
-	FileImage? _avatarImage() {
+	ImageProvider? _imageProvider() {
 		final path = avatarPath;
-		if (path == null || path.isEmpty) {
-			return null;
+		if (path != null && path.isNotEmpty) {
+			final file = File(path);
+			if (file.existsSync()) {
+				return FileImage(file);
+			}
 		}
 
-		final file = File(path);
-		if (!file.existsSync()) {
-			return null;
+		final url = avatarUrl;
+		if (url != null && url.isNotEmpty) {
+			return NetworkImage(url);
 		}
 
-		return FileImage(file);
+		return null;
 	}
 
 	String _firstLetter(String name) {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../models/master_profile.dart';
 import '../../models/tariff_payment_summary.dart';
 import '../../models/tariff_plan.dart';
+import 'edit_profile_screen.dart';
 import 'master_profile_screen.dart';
 import '../support/create_support_ticket_screen.dart';
 import '../support/support_chat_screen.dart';
@@ -18,6 +20,13 @@ class ProfileTabNavigator extends StatelessWidget {
 		return Navigator(
 			onGenerateRoute: (settings) {
 				switch (settings.name) {
+					case EditProfileScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => EditProfileScreen(
+								profile: settings.arguments! as MasterProfile,
+							),
+						);
 					case TariffsScreen.routeName:
 						return MaterialPageRoute(
 							settings: settings,

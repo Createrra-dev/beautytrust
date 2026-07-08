@@ -241,6 +241,44 @@ class AppApiRepository {
 
 	Future<MasterProfile> fetchProfile() async {
 		final json = await _api.getJson('/api/profile');
+		return _masterProfileFromJson(json);
+	}
+
+	Future<MasterProfile> updateProfile({
+		String? firstName,
+		String? email,
+		String? badgeLabel,
+	}) async {
+		final body = <String, dynamic>{};
+		if (firstName != null) {
+			body['first_name'] = firstName;
+		}
+		if (email != null) {
+			body['email'] = email;
+		}
+		if (badgeLabel != null) {
+			body['badge_label'] = badgeLabel;
+		}
+		final json = await _api.patchJson('/api/profile', body: body);
+		return _masterProfileFromJson(json);
+	}
+
+	Future<MasterProfile> uploadAvatar(String filePath) async {
+		final json = await _api.multipartPost(
+			'/api/profile/avatar',
+			fieldName: 'file',
+			filePath: filePath,
+			filename: 'avatar.jpg',
+		);
+		return _masterProfileFromJson(json);
+	}
+
+	Future<MasterProfile> deleteAvatar() async {
+		final json = await _api.deleteJson('/api/profile/avatar');
+		return _masterProfileFromJson(json);
+	}
+
+	MasterProfile _masterProfileFromJson(Map<String, dynamic> json) {
 		return MasterProfile(
 			firstName: json['first_name'] as String,
 			badgeLabel: json['badge_label'] as String,
@@ -252,6 +290,8 @@ class AppApiRepository {
 			tariffLabel: json['tariff_label'] as String,
 			email: json['email'] as String?,
 			phoneDigits: json['phone_digits'] as String?,
+			avatarUrl: json['avatar_url'] as String?,
+			yearsExperience: json['years_experience'] as int? ?? 0,
 		);
 	}
 

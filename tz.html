@@ -401,14 +401,14 @@
 				<div class="task-group">
 					<h4>2.1 Профиль <span class="badge badge-p1">P1</span></h4>
 					<label class="task"><input type="checkbox" data-id="2-1-1" checked><span class="task-text">Фронт: подключить <code>fetchProfile()</code> вместо MasterProfileService<span class="task-note">MasterProfileScreen тянет JWT-профиль; fallback на демо</span></span></label>
-					<label class="task"><input type="checkbox" data-id="2-1-2"><span class="task-text"><code>PATCH /api/profile</code> — имя, email</span></label>
-					<label class="task"><input type="checkbox" data-id="2-1-3"><span class="task-text">Статистика профиля из БД (clients_count, reviews_count, years)</span></label>
+					<label class="task"><input type="checkbox" data-id="2-1-2" checked><span class="task-text"><code>PATCH /api/profile</code> — имя, email<span class="task-note">+ badge_label; EditProfileScreen</span></span></label>
+					<label class="task"><input type="checkbox" data-id="2-1-3" checked><span class="task-text">Статистика профиля из БД (clients_count, reviews_count, years)<span class="task-note">Пересчёт clients/protected/prevented; years_experience</span></span></label>
 				</div>
 				<div class="task-group">
 					<h4>2.2 Аватар <span class="badge badge-p1">P1</span></h4>
-					<label class="task"><input type="checkbox" data-id="2-2-1"><span class="task-text"><code>POST /api/profile/avatar</code> (multipart upload)</span></label>
-					<label class="task"><input type="checkbox" data-id="2-2-2"><span class="task-text"><code>DELETE /api/profile/avatar</code></span></label>
-					<label class="task"><input type="checkbox" data-id="2-2-3"><span class="task-text">Фронт: MasterAvatarService → upload на сервер</span></label>
+					<label class="task"><input type="checkbox" data-id="2-2-1" checked><span class="task-text"><code>POST /api/profile/avatar</code> (multipart upload)</span></label>
+					<label class="task"><input type="checkbox" data-id="2-2-2" checked><span class="task-text"><code>DELETE /api/profile/avatar</code></span></label>
+					<label class="task"><input type="checkbox" data-id="2-2-3" checked><span class="task-text">Фронт: MasterAvatarService → upload на сервер</span></label>
 				</div>
 				<div class="task-group">
 					<h4>2.3 Расширения профиля <span class="badge badge-p2">P2</span></h4>
@@ -543,7 +543,7 @@
 				</div>
 				<div class="task-group">
 					<h4>Sprint 2</h4>
-					<label class="task"><input type="checkbox" data-id="s2-1"><span class="task-text">Профиль (редактирование) + аватар на сервер<span class="task-note">Чтение профиля по JWT уже есть</span></span></label>
+					<label class="task"><input type="checkbox" data-id="s2-1" checked><span class="task-text">Профиль (редактирование) + аватар на сервер<span class="task-note">PATCH + avatar POST/DELETE</span></span></label>
 					<label class="task"><input type="checkbox" data-id="s2-2"><span class="task-text">Услуги мастера (CRUD + фронт)<span class="task-note">CRUD API есть; UI редактора услуг — позже</span></span></label>
 					<label class="task"><input type="checkbox" data-id="s2-3"><span class="task-text">Платежи → подписки</span></label>
 				</div>
@@ -566,7 +566,7 @@
 	<script>
 		const STORAGE_KEY = 'beautytrust-tz-progress';
 		const STORAGE_VERSION_KEY = 'beautytrust-tz-progress-version';
-		const PROGRESS_VERSION = 6;
+		const PROGRESS_VERSION = 7;
 
 		function loadProgress() {
 			try {

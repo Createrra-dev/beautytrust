@@ -5,6 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api/app_api_repository.dart';
+import 'api/beauty_trust_api.dart';
+import 'auth_session.dart';
+
 class MasterAvatarService extends ChangeNotifier {
 	MasterAvatarService._();
 
@@ -14,25 +18,39 @@ class MasterAvatarService extends ChangeNotifier {
 	static const _avatarFileName = 'master_avatar.jpg';
 
 	final ImagePicker _imagePicker = ImagePicker();
+	final AppApiRepository _api = AppApiRepository();
 
-	String? _avatarPath;
+	String? _localPath;
+	String? _remoteUrl;
 	var _isLoading = false;
 
-	String? get avatarPath => _avatarPath;
+	/// Local file path if present, otherwise null (use [remoteUrl]).
+	String? get avatarPath => _localPath;
+
+	String? get remoteUrl => _remoteUrl;
 
 	bool get isLoading => _isLoading;
 
-	Future<void> load() async {
+	Future<void> load({String? remoteUrl}) async {
+		if (remoteUrl != null) {
+			_remoteUrl = remoteUrl;
+		}
+
 		final preferences = await SharedPreferences.getInstance();
 		final savedPath = preferences.getString(_prefsKey);
 
 		if (savedPath != null && await File(savedPath).exists()) {
-			_avatarPath = savedPath;
+			_localPath = savedPath;
 		} else {
-			_avatarPath = null;
+			_localPath = null;
 			await preferences.remove(_prefsKey);
 		}
 
+		notifyListeners();
+	}
+
+	void applyRemoteUrl(String? url) {
+		_remoteUrl = url;
 		notifyListeners();
 	}
 
@@ -42,6 +60,29 @@ class MasterAvatarService extends ChangeNotifier {
 
 	Future<bool> pickFromGallery() {
 		return _pickImage(ImageSource.gallery);
+	}
+
+	Future<bool> removeAvatar() async {
+		_isLoading = true;
+		notifyListeners();
+
+		try {
+			await AuthSession.load();
+			if (AuthSession.isAuthenticated) {
+				try {
+					final profile = await _api.deleteAvatar();
+					_remoteUrl = profile.avatarUrl;
+				} on ApiException {
+					// Fall through to local clear.
+				}
+			}
+
+			await _clearLocal();
+			return true;
+		} finally {
+			_isLoading = false;
+			notifyListeners();
+		}
 	}
 
 	Future<bool> _pickImage(ImageSource source) async {
@@ -61,6 +102,17 @@ class MasterAvatarService extends ChangeNotifier {
 			}
 
 			await _savePickedImage(pickedImage);
+
+			await AuthSession.load();
+			if (AuthSession.isAuthenticated) {
+				try {
+					final profile = await _api.uploadAvatar(_localPath!);
+					_remoteUrl = profile.avatarUrl;
+				} on ApiException {
+					// Keep local avatar as fallback.
+				}
+			}
+
 			return true;
 		} finally {
 			_isLoading = false;
@@ -73,10 +125,22 @@ class MasterAvatarService extends ChangeNotifier {
 		final savedPath = '${documentsDirectory.path}/$_avatarFileName';
 		await File(pickedImage.path).copy(savedPath);
 
-		_avatarPath = savedPath;
+		_localPath = savedPath;
 
 		final preferences = await SharedPreferences.getInstance();
 		await preferences.setString(_prefsKey, savedPath);
 		notifyListeners();
+	}
+
+	Future<void> _clearLocal() async {
+		_localPath = null;
+		final preferences = await SharedPreferences.getInstance();
+		await preferences.remove(_prefsKey);
+
+		final documentsDirectory = await getApplicationDocumentsDirectory();
+		final file = File('${documentsDirectory.path}/$_avatarFileName');
+		if (await file.exists()) {
+			await file.delete();
+		}
 	}
 }

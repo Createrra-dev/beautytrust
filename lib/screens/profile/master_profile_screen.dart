@@ -14,6 +14,7 @@ import '../../widgets/profile/master_avatar.dart';
 import '../../widgets/profile/profile_menu_item.dart';
 import '../auth/phone_login_screen.dart';
 import '../support/support_tickets_screen.dart';
+import 'edit_profile_screen.dart';
 import 'tariffs_screen.dart';
 
 class MasterProfileScreen extends StatefulWidget {
@@ -26,27 +27,41 @@ class MasterProfileScreen extends StatefulWidget {
 class _MasterProfileScreenState extends State<MasterProfileScreen> {
 	final _avatarService = MasterAvatarService.instance;
 	final _apiRepository = AppApiRepository();
-	late Future<MasterProfile> _profileFuture;
+	MasterProfile? _profile;
+	var _isLoadingProfile = true;
 
 	@override
 	void initState() {
 		super.initState();
 		_avatarService.addListener(_onAvatarChanged);
 		_avatarService.load();
-		_profileFuture = _loadProfile();
+		_reloadProfile();
 	}
 
-	Future<MasterProfile> _loadProfile() async {
+	Future<void> _reloadProfile() async {
+		setState(() => _isLoadingProfile = true);
 		await AuthSession.load();
+
+		MasterProfile profile;
 		if (AuthSession.isAuthenticated) {
 			try {
-				return await _apiRepository.fetchProfile();
+				profile = await _apiRepository.fetchProfile();
 			} on ApiException {
-				return MasterProfileService.currentMaster;
+				profile = MasterProfileService.currentMaster;
 			}
+		} else {
+			profile = MasterProfileService.currentMaster;
 		}
 
-		return MasterProfileService.currentMaster;
+		if (!mounted) {
+			return;
+		}
+
+		_avatarService.applyRemoteUrl(profile.avatarUrl);
+		setState(() {
+			_profile = profile;
+			_isLoadingProfile = false;
+		});
 	}
 
 	@override
@@ -60,7 +75,13 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 	}
 
 	Future<void> _pickAvatar() async {
-		final action = await showAvatarPickerSheet(context);
+		final hasAvatar = _avatarService.avatarPath != null ||
+			(_avatarService.remoteUrl != null && _avatarService.remoteUrl!.isNotEmpty);
+
+		final action = await showAvatarPickerSheet(
+			context,
+			canRemove: hasAvatar,
+		);
 		if (!mounted || action == null) {
 			return;
 		}
@@ -68,6 +89,7 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 		final saved = switch (action) {
 			AvatarPickerAction.camera => await _avatarService.pickFromCamera(),
 			AvatarPickerAction.gallery => await _avatarService.pickFromGallery(),
+			AvatarPickerAction.remove => await _avatarService.removeAvatar(),
 		};
 
 		if (!mounted || !saved) {
@@ -76,7 +98,34 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 
 		AppSnackBar.show(
 			context,
-			'Фото профиля обновлено',
+			action == AvatarPickerAction.remove
+				? 'Фото профиля удалено'
+				: 'Фото профиля обновлено',
+			type: AppSnackBarType.success,
+		);
+	}
+
+	Future<void> _openEditProfile() async {
+		final profile = _profile;
+		if (profile == null) {
+			return;
+		}
+
+		final updated = await Navigator.of(context).push<MasterProfile>(
+			MaterialPageRoute(
+				builder: (context) => EditProfileScreen(profile: profile),
+			),
+		);
+
+		if (!mounted || updated == null) {
+			return;
+		}
+
+		_avatarService.applyRemoteUrl(updated.avatarUrl);
+		setState(() => _profile = updated);
+		AppSnackBar.show(
+			context,
+			'Профиль обновлён',
 			type: AppSnackBarType.success,
 		);
 	}
@@ -84,16 +133,12 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 	@override
 	Widget build(BuildContext context) {
 		return SafeArea(
-			child: FutureBuilder<MasterProfile>(
-				future: _profileFuture,
-				builder: (context, snapshot) {
-					if (snapshot.connectionState != ConnectionState.done) {
-						return const Center(child: CircularProgressIndicator());
-					}
-
-					final profile = snapshot.data ?? MasterProfileService.currentMaster;
-
-					return SingleChildScrollView(
+			child: _isLoadingProfile || _profile == null
+				? const Center(child: CircularProgressIndicator())
+				: RefreshIndicator(
+					onRefresh: _reloadProfile,
+					child: SingleChildScrollView(
+						physics: const AlwaysScrollableScrollPhysics(),
 						padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
 						child: Column(
 							crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -101,15 +146,17 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 								const _ProfileHeader(),
 								const SizedBox(height: 24),
 								_ProfileHero(
-									profile: profile,
+									profile: _profile!,
 									avatarPath: _avatarService.avatarPath,
+									avatarUrl: _avatarService.remoteUrl ?? _profile!.avatarUrl,
 									isAvatarLoading: _avatarService.isLoading,
 									onAvatarTap: _pickAvatar,
+									onEditTap: _openEditProfile,
 								),
-								if (profile.email != null && profile.email!.isNotEmpty) ...[
+								if (_profile!.email != null && _profile!.email!.isNotEmpty) ...[
 									const SizedBox(height: 12),
 									Text(
-										profile.email!,
+										_profile!.email!,
 										textAlign: TextAlign.center,
 										style: const TextStyle(
 											fontSize: 14,
@@ -118,17 +165,16 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 									),
 								],
 								const SizedBox(height: 24),
-								_ProfileStatsRow(profile: profile),
+								_ProfileStatsRow(profile: _profile!),
 								const SizedBox(height: 20),
 								_ProfileMenuCard(
 									onItemTap: (item) => _onMenuTap(context, item),
-									tariffLabel: profile.tariffLabel,
+									tariffLabel: _profile!.tariffLabel,
 								),
 							],
 						),
-					);
-				},
-			),
+					),
+				),
 		);
 	}
 
@@ -145,6 +191,11 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 
 		if (item == MasterProfileMenuItem.support) {
 			Navigator.of(context).pushNamed(SupportTicketsScreen.routeName);
+			return;
+		}
+
+		if (item == MasterProfileMenuItem.settings) {
+			_openEditProfile();
 			return;
 		}
 
@@ -222,14 +273,18 @@ class _ProfileHero extends StatelessWidget {
 	const _ProfileHero({
 		required this.profile,
 		required this.avatarPath,
+		required this.avatarUrl,
 		required this.isAvatarLoading,
 		required this.onAvatarTap,
+		required this.onEditTap,
 	});
 
 	final MasterProfile profile;
 	final String? avatarPath;
+	final String? avatarUrl;
 	final bool isAvatarLoading;
 	final VoidCallback onAvatarTap;
+	final VoidCallback onEditTap;
 
 	@override
 	Widget build(BuildContext context) {
@@ -238,6 +293,7 @@ class _ProfileHero extends StatelessWidget {
 				MasterAvatar(
 					firstName: profile.firstName,
 					avatarPath: avatarPath,
+					avatarUrl: avatarUrl,
 					isLoading: isAvatarLoading,
 					onTap: onAvatarTap,
 				),
@@ -289,8 +345,36 @@ class _ProfileHero extends StatelessWidget {
 						),
 					],
 				),
+				if (profile.yearsExperience > 0) ...[
+					const SizedBox(height: 6),
+					Text(
+						_yearsLabel(profile.yearsExperience),
+						style: const TextStyle(
+							color: AppColors.textMuted,
+							fontSize: 13,
+						),
+					),
+				],
+				const SizedBox(height: 14),
+				TextButton.icon(
+					onPressed: onEditTap,
+					icon: const Icon(Icons.edit_outlined, size: 18),
+					label: const Text('Редактировать'),
+				),
 			],
 		);
+	}
+
+	String _yearsLabel(int years) {
+		final mod10 = years % 10;
+		final mod100 = years % 100;
+		if (mod10 == 1 && mod100 != 11) {
+			return '$years год в Beauty Trust';
+		}
+		if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+			return '$years года в Beauty Trust';
+		}
+		return '$years лет в Beauty Trust';
 	}
 }
 

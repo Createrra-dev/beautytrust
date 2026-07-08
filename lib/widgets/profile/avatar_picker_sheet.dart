@@ -5,9 +5,13 @@ import '../../theme/app_theme.dart';
 enum AvatarPickerAction {
 	camera,
 	gallery,
+	remove,
 }
 
-Future<AvatarPickerAction?> showAvatarPickerSheet(BuildContext context) {
+Future<AvatarPickerAction?> showAvatarPickerSheet(
+	BuildContext context, {
+	bool canRemove = false,
+}) {
 	return showModalBottomSheet<AvatarPickerAction>(
 		context: context,
 		backgroundColor: AppColors.surfaceElevated,
@@ -58,6 +62,17 @@ Future<AvatarPickerAction?> showAvatarPickerSheet(BuildContext context) {
 									Navigator.of(context).pop(AvatarPickerAction.gallery);
 								},
 							),
+							if (canRemove) ...[
+								const SizedBox(height: 8),
+								_AvatarPickerOption(
+									icon: Icons.delete_outline_rounded,
+									title: 'Удалить фото',
+									isDestructive: true,
+									onTap: () {
+										Navigator.of(context).pop(AvatarPickerAction.remove);
+									},
+								),
+							],
 						],
 					),
 				),
@@ -71,14 +86,18 @@ class _AvatarPickerOption extends StatelessWidget {
 		required this.icon,
 		required this.title,
 		required this.onTap,
+		this.isDestructive = false,
 	});
 
 	final IconData icon;
 	final String title;
 	final VoidCallback onTap;
+	final bool isDestructive;
 
 	@override
 	Widget build(BuildContext context) {
+		final color = isDestructive ? AppColors.error : AppColors.primary;
+
 		return Material(
 			color: AppColors.surface,
 			borderRadius: BorderRadius.circular(14),
@@ -93,13 +112,13 @@ class _AvatarPickerOption extends StatelessWidget {
 					),
 					child: Row(
 						children: [
-							Icon(icon, color: AppColors.primary, size: 22),
+							Icon(icon, color: color, size: 22),
 							const SizedBox(width: 12),
 							Expanded(
 								child: Text(
 									title,
-									style: const TextStyle(
-										color: AppColors.textPrimary,
+									style: TextStyle(
+										color: isDestructive ? AppColors.error : AppColors.textPrimary,
 										fontSize: 16,
 										fontWeight: FontWeight.w500,
 									),
