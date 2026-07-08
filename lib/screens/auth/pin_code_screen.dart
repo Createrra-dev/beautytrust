@@ -5,6 +5,7 @@ import '../../widgets/auth/auth_scaffold.dart';
 import '../../widgets/auth/code_dots.dart';
 import '../../widgets/auth/numeric_keypad.dart';
 import '../../services/auth_session.dart';
+import '../../services/biometric_auth_service.dart';
 import '../home/main_shell_screen.dart';
 
 enum PinCodeMode {
@@ -18,10 +19,14 @@ class PinCodeScreen extends StatefulWidget {
 		super.key,
 		required this.mode,
 		this.initialPin,
+		this.phoneDigits,
+		this.tryBiometricOnOpen = false,
 	});
 
 	final PinCodeMode mode;
 	final String? initialPin;
+	final String? phoneDigits;
+	final bool tryBiometricOnOpen;
 
 	@override
 	State<PinCodeScreen> createState() => _PinCodeScreenState();
@@ -30,16 +35,149 @@ class PinCodeScreen extends StatefulWidget {
 class _PinCodeScreenState extends State<PinCodeScreen> {
 	static const _pinLength = 4;
 
+	final _biometricAuthService = BiometricAuthService();
+
 	late PinCodeMode _mode;
 	final _digits = <String>[];
 	String? _firstPin;
 	String? _errorMessage;
+	var _biometricAvailable = false;
+	var _biometricLabel = 'Face ID';
+	var _isBiometricUnlocking = false;
 
 	@override
 	void initState() {
 		super.initState();
 		_mode = widget.mode;
 		_firstPin = widget.initialPin;
+		_initializeEntryMode();
+	}
+
+	Future<void> _initializeEntryMode() async {
+		if (_mode != PinCodeMode.entry) {
+			return;
+		}
+
+		await _loadBiometricState();
+		await _validatePinSession();
+
+		if (!widget.tryBiometricOnOpen || !AuthSession.biometricEnabled) {
+			return;
+		}
+
+		await _tryBiometricUnlock();
+	}
+
+	Future<void> _loadBiometricState() async {
+		final canAuthenticate = await _biometricAuthService.canAuthenticate;
+		final label = await _biometricAuthService.biometricLabel();
+		if (!mounted) {
+			return;
+		}
+
+		setState(() {
+			_biometricAvailable = canAuthenticate;
+			_biometricLabel = label;
+		});
+	}
+
+	Future<void> _validatePinSession() async {
+		if (_mode != PinCodeMode.entry) {
+			return;
+		}
+
+		final phoneDigits = widget.phoneDigits;
+		if (phoneDigits == null) {
+			return;
+		}
+
+		final hasValidPin = await AuthSession.hasStoredPinForPhone(phoneDigits);
+		if (!hasValidPin && mounted) {
+			setState(() {
+				_errorMessage = 'PIN не найден. Войдите по коду из Telegram.';
+			});
+		}
+	}
+
+	Future<void> _tryBiometricUnlock() async {
+		if (!AuthSession.biometricEnabled || !_biometricAvailable || _isBiometricUnlocking) {
+			return;
+		}
+
+		setState(() {
+			_isBiometricUnlocking = true;
+			_errorMessage = null;
+		});
+
+		final result = await _biometricAuthService.authenticate(
+			reason: 'Войдите в Beauty Trust',
+		);
+
+		if (!mounted) {
+			return;
+		}
+
+		setState(() => _isBiometricUnlocking = false);
+
+		if (result == BiometricUnlockResult.success) {
+			_openHome();
+			return;
+		}
+
+		if (result == BiometricUnlockResult.failed) {
+			setState(() {
+				_errorMessage = 'Не удалось войти по $_biometricLabel. Введите PIN.';
+			});
+		}
+	}
+
+	Future<void> _offerBiometricSetup() async {
+		if (!await _biometricAuthService.canAuthenticate || !mounted) {
+			_openHome();
+			return;
+		}
+
+		final label = await _biometricAuthService.biometricLabel();
+		if (!mounted) {
+			return;
+		}
+
+		final shouldEnable = await showDialog<bool>(
+			context: context,
+			builder: (dialogContext) {
+				return AlertDialog(
+					title: Text('Включить вход по $label?'),
+					content: Text(
+						'При следующем запуске приложения можно будет входить по $label без ввода PIN.',
+					),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(false),
+							child: const Text('Не сейчас'),
+						),
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(true),
+							child: const Text('Включить'),
+						),
+					],
+				);
+			},
+		);
+
+		if (shouldEnable == true) {
+			final result = await _biometricAuthService.authenticate(
+				reason: 'Подтвердите включение входа по $label',
+			);
+			if (result == BiometricUnlockResult.success) {
+				await AuthSession.setBiometricEnabled(true);
+			}
+		}
+
+		if (!mounted) {
+			return;
+		}
+
+		_openHome();
 	}
 
 	String get _title {
@@ -88,7 +226,7 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
 		});
 	}
 
-	void _handleCompletedPin(String pin) {
+	Future<void> _handleCompletedPin(String pin) async {
 		switch (_mode) {
 			case PinCodeMode.setup:
 				setState(() {
@@ -98,8 +236,14 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
 				});
 			case PinCodeMode.confirm:
 				if (pin == _firstPin) {
-					AuthSession.pinCode = pin;
-					_openHome();
+					final phoneDigits = widget.phoneDigits;
+					if (phoneDigits == null || phoneDigits.length != 10) {
+						_resetInput(errorMessage: 'Не удалось сохранить PIN. Войдите заново.');
+						return;
+					}
+
+					await AuthSession.savePin(pin: pin, phoneDigits: phoneDigits);
+					await _offerBiometricSetup();
 					return;
 				}
 
@@ -109,7 +253,25 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
 				});
 				_resetInput(errorMessage: 'PIN-коды не совпадают. Попробуйте снова.');
 			case PinCodeMode.entry:
+				final phoneDigits = widget.phoneDigits;
+				if (phoneDigits == null) {
+					_resetInput(errorMessage: 'Войдите по номеру телефона');
+					return;
+				}
+
+				final hasValidPin = await AuthSession.hasStoredPinForPhone(phoneDigits);
+				if (!hasValidPin) {
+					_resetInput(errorMessage: 'PIN не найден. Войдите по коду из Telegram.');
+					return;
+				}
+
 				if (pin == AuthSession.pinCode) {
+					if (!AuthSession.biometricEnabled &&
+						await _biometricAuthService.canAuthenticate) {
+						await _offerBiometricSetup();
+						return;
+					}
+
 					_openHome();
 					return;
 				}
@@ -184,6 +346,31 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
 						),
 					],
 					const Spacer(),
+					if (_mode == PinCodeMode.entry &&
+						_biometricAvailable &&
+						AuthSession.biometricEnabled) ...[
+						Padding(
+							padding: const EdgeInsets.only(bottom: 16),
+							child: TextButton.icon(
+								onPressed: _isBiometricUnlocking ? null : _tryBiometricUnlock,
+								icon: Icon(
+									_biometricLabel == 'Face ID'
+										? Icons.face_rounded
+										: Icons.fingerprint_rounded,
+									color: AppColors.primary,
+								),
+								label: Text(
+									_isBiometricUnlocking
+										? 'Проверяем $_biometricLabel...'
+										: 'Войти по $_biometricLabel',
+									style: const TextStyle(
+										color: AppColors.primary,
+										fontWeight: FontWeight.w600,
+									),
+								),
+							),
+						),
+					],
 					NumericKeypad(
 						style: NumericKeypadStyle.plated,
 						onDigit: _onDigit,

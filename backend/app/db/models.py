@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -19,6 +19,8 @@ class Master(Base):
 	protected_income: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	tariff_label: Mapped[str] = mapped_column(String(120), nullable=False, default="Мастер")
 	avatar_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)
+	telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True, index=True)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -158,6 +160,36 @@ class SupportMessage(Base):
 	sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 	ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
+
+
+class OtpSession(Base):
+	__tablename__ = "otp_sessions"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	session_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+	phone_digits: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+	otp_code: Mapped[str] = mapped_column(String(8), nullable=False)
+	delivery_channel: Mapped[str] = mapped_column(String(20), nullable=False, default="telegram")
+	zvonok_call_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+	telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
+	delivered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+	verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PhoneTelegramLink(Base):
+	__tablename__ = "phone_telegram_links"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	phone_digits: Mapped[str] = mapped_column(String(10), nullable=False, unique=True, index=True)
+	telegram_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False, unique=True, index=True)
+	updated_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		server_default=func.now(),
+		onupdate=func.now(),
+	)
 
 
 class CheckHistoryRecord(Base):

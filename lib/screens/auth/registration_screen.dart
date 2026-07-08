@@ -1,36 +1,50 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api/auth_api.dart';
+import '../../services/api/beauty_trust_api.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
+import '../../widgets/app_snack_bar.dart';
 import '../../widgets/auth/app_text_field.dart';
 import '../../widgets/auth/auth_buttons.dart';
 import '../../widgets/auth/auth_scaffold.dart';
 import '../../widgets/auth/password_requirements.dart';
 import '../../widgets/auth/phone_text_field.dart';
+import 'otp_method_screen.dart';
 import 'phone_login_screen.dart';
-import 'pin_code_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
-	const RegistrationScreen({super.key});
+	const RegistrationScreen({
+		super.key,
+		this.initialPhoneDigits,
+	});
+
+	final String? initialPhoneDigits;
 
 	@override
 	State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-	final _firstNameController = TextEditingController(text: 'Анна');
-	final _phoneController = TextEditingController(text: '9991234567');
-	final _emailController = TextEditingController(text: 'anna.petrova@mail.ru');
-	final _passwordController = TextEditingController(text: 'Beauty123');
-	final _confirmPasswordController = TextEditingController(text: 'Beauty123');
+	final _authApi = AuthApi();
+	final _firstNameController = TextEditingController();
+	final _phoneController = TextEditingController();
+	final _emailController = TextEditingController();
+	final _passwordController = TextEditingController();
+	final _confirmPasswordController = TextEditingController();
 
 	var _obscurePassword = true;
 	var _obscureConfirmPassword = true;
+	var _isSubmitting = false;
 
 	@override
 	void initState() {
 		super.initState();
 		PhoneTextField.applyMaskToController(_phoneController);
+		final initialPhoneDigits = widget.initialPhoneDigits;
+		if (initialPhoneDigits != null && initialPhoneDigits.length == 10) {
+			_phoneController.text = formatPhoneInput(initialPhoneDigits);
+		}
 	}
 
 	@override
@@ -60,15 +74,80 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 		return _passwordController.text != confirmPassword;
 	}
 
-	void _register() {
-		if (!_canRegister) {
+	Future<void> _register() async {
+		if (!_canRegister || _isSubmitting) {
 			return;
 		}
 
-		Navigator.of(context).push(
-			MaterialPageRoute(
-				builder: (context) => const PinCodeScreen(mode: PinCodeMode.setup),
-			),
+		final phoneDigits = extractPhoneDigits(_phoneController.text);
+		final firstName = _firstNameController.text.trim();
+
+		setState(() => _isSubmitting = true);
+
+		try {
+			final isRegistered = await _authApi.isPhoneRegistered(phoneDigits);
+			if (!mounted) {
+				return;
+			}
+
+			if (isRegistered) {
+				setState(() => _isSubmitting = false);
+				await _showAlreadyRegisteredDialog(phoneDigits);
+				return;
+			}
+
+			setState(() => _isSubmitting = false);
+
+			Navigator.of(context).push(
+				MaterialPageRoute(
+					builder: (context) => OtpMethodScreen(
+						phoneDigits: phoneDigits,
+						firstName: firstName,
+						isRegistration: true,
+					),
+				),
+			);
+		} on ApiException catch (error) {
+			if (!mounted) {
+				return;
+			}
+
+			setState(() => _isSubmitting = false);
+			AppSnackBar.show(context, error.message);
+		}
+	}
+
+	Future<void> _showAlreadyRegisteredDialog(String phoneDigits) async {
+		await showDialog<void>(
+			context: context,
+			builder: (dialogContext) {
+				return AlertDialog(
+					title: const Text('Вы уже зарегистрированы'),
+					content: const Text(
+						'Войдите в аккаунт, чтобы начать пользоваться программой.',
+					),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(),
+							child: const Text('Отмена'),
+						),
+						TextButton(
+							onPressed: () {
+								Navigator.of(dialogContext).pop();
+								Navigator.of(context).pushAndRemoveUntil(
+									MaterialPageRoute(
+										builder: (context) => OtpMethodScreen(
+											phoneDigits: phoneDigits,
+										),
+									),
+									(_) => false,
+								);
+							},
+							child: const Text('Войти'),
+						),
+					],
+				);
+			},
 		);
 	}
 
@@ -166,8 +245,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 								PasswordRequirements(password: _passwordController.text),
 								const SizedBox(height: 24),
 								PrimaryAuthButton(
-									label: 'Зарегистрироваться',
-									onPressed: _canRegister ? _register : null,
+									label: _isSubmitting ? 'Проверяем номер...' : 'Зарегистрироваться',
+									onPressed: _canRegister && !_isSubmitting ? _register : null,
 								),
 								const SizedBox(height: 20),
 								Row(

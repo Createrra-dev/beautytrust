@@ -10,8 +10,10 @@ from app.db.base import Base
 from app.db.seed import seed_database
 from app.db.session import SessionLocal, engine
 from app.routers.admin import router as admin_router
+from app.routers.auth import router as auth_router
 from app.routers.mobile import router as mobile_router
 from app.routers.payments import return_router, router as payments_router
+from app.services.telegram_bot import setup_webhook
 from app.storage.database import init_database
 
 
@@ -26,6 +28,7 @@ async def lifespan(_: FastAPI):
 	if not uploads_path.is_absolute():
 		uploads_path = Path(__file__).resolve().parents[1] / uploads_path
 	uploads_path.mkdir(parents=True, exist_ok=True)
+	await setup_webhook()
 	yield
 
 
@@ -47,6 +50,7 @@ app.add_middleware(
 app.include_router(payments_router)
 app.include_router(return_router)
 app.include_router(admin_router)
+app.include_router(auth_router)
 app.include_router(mobile_router)
 
 uploads_dir = Path(settings.uploads_dir)

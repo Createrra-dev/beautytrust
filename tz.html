@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Beauty Trust — ТЗ бэкенда</title>
+	<style>
+		:root {
+			--bg: #121217;
+			--surface: #1e1e26;
+			--surface-2: #26262f;
+			--primary: #8a4fff;
+			--secondary: #34d399;
+			--text: #ffffff;
+			--muted: #9ca3af;
+			--border: #2f2f3a;
+			--done: #34d399;
+			--warn: #fbbf24;
+			--danger: #f87171;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			background:
+				radial-gradient(circle at top left, rgba(138, 79, 255, .15), transparent 35%),
+				radial-gradient(circle at bottom right, rgba(52, 211, 153, .1), transparent 30%),
+				var(--bg);
+			color: var(--text);
+			line-height: 1.6;
+		}
+
+		.container {
+			max-width: 960px;
+			margin: 0 auto;
+			padding: 32px 24px 80px;
+		}
+
+		header {
+			margin-bottom: 32px;
+		}
+
+		h1 {
+			margin: 0 0 8px;
+			font-size: 28px;
+		}
+
+		.subtitle {
+			color: var(--muted);
+			margin: 0 0 20px;
+		}
+
+		.progress-bar-wrap {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 16px 20px;
+			margin-bottom: 32px;
+		}
+
+		.progress-label {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 10px;
+			font-size: 14px;
+		}
+
+		.progress-bar {
+			height: 8px;
+			background: var(--surface-2);
+			border-radius: 99px;
+			overflow: hidden;
+		}
+
+		.progress-fill {
+			height: 100%;
+			background: linear-gradient(90deg, var(--primary), var(--secondary));
+			border-radius: 99px;
+			width: 0%;
+			transition: width .3s ease;
+		}
+
+		.legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+			margin-bottom: 24px;
+			font-size: 13px;
+		}
+
+		.badge {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 6px;
+			font-size: 11px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: .03em;
+		}
+
+		.badge-p0 { background: rgba(248, 113, 113, .2); color: var(--danger); }
+		.badge-p1 { background: rgba(251, 191, 36, .2); color: var(--warn); }
+		.badge-p2 { background: rgba(52, 211, 153, .2); color: var(--secondary); }
+		.badge-p3 { background: rgba(156, 163, 175, .2); color: var(--muted); }
+		.badge-done { background: rgba(52, 211, 153, .2); color: var(--secondary); }
+		.badge-partial { background: rgba(251, 191, 36, .2); color: var(--warn); }
+
+		.phase {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			margin-bottom: 20px;
+			overflow: hidden;
+		}
+
+		.phase-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 18px 22px;
+			cursor: pointer;
+			user-select: none;
+			gap: 12px;
+		}
+
+		.phase-header:hover { background: var(--surface-2); }
+
+		.phase-title {
+			font-size: 17px;
+			font-weight: 600;
+			margin: 0;
+		}
+
+		.phase-meta {
+			font-size: 13px;
+			color: var(--muted);
+			white-space: nowrap;
+		}
+
+		.phase-body {
+			padding: 0 22px 18px;
+			border-top: 1px solid var(--border);
+		}
+
+		.phase.collapsed .phase-body { display: none; }
+
+		.task-group {
+			margin-top: 16px;
+		}
+
+		.task-group h4 {
+			margin: 0 0 10px;
+			font-size: 14px;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: .04em;
+		}
+
+		.task {
+			display: flex;
+			align-items: flex-start;
+			gap: 12px;
+			padding: 10px 12px;
+			border-radius: 10px;
+			margin-bottom: 4px;
+			transition: background .15s;
+		}
+
+		.task:hover { background: var(--surface-2); }
+
+		.task input[type="checkbox"] {
+			width: 18px;
+			height: 18px;
+			margin-top: 2px;
+			accent-color: var(--primary);
+			cursor: pointer;
+			flex-shrink: 0;
+		}
+
+		.task.done .task-text {
+			text-decoration: line-through;
+			color: var(--muted);
+		}
+
+		.task-text {
+			flex: 1;
+			font-size: 15px;
+		}
+
+		.task-text code {
+			background: var(--surface-2);
+			padding: 1px 6px;
+			border-radius: 4px;
+			font-size: 13px;
+		}
+
+		.task-note {
+			display: block;
+			font-size: 13px;
+			color: var(--muted);
+			margin-top: 2px;
+		}
+
+		.status-table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 14px;
+			margin: 16px 0;
+		}
+
+		.status-table th,
+		.status-table td {
+			padding: 10px 12px;
+			border-bottom: 1px solid var(--border);
+			text-align: left;
+		}
+
+		.status-table th {
+			color: var(--muted);
+			font-weight: 500;
+			font-size: 12px;
+			text-transform: uppercase;
+		}
+
+		.actions {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			margin-bottom: 24px;
+		}
+
+		button {
+			background: var(--surface);
+			border: 1px solid var(--border);
+			color: var(--text);
+			padding: 8px 16px;
+			border-radius: 8px;
+			cursor: pointer;
+			font-size: 14px;
+		}
+
+		button:hover { border-color: var(--primary); }
+
+		button.primary {
+			background: var(--primary);
+			border-color: var(--primary);
+		}
+
+		footer {
+			margin-top: 40px;
+			padding-top: 20px;
+			border-top: 1px solid var(--border);
+			font-size: 13px;
+			color: var(--muted);
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<header>
+			<h1>Beauty Trust — дорожная карта бэкенда</h1>
+			<p class="subtitle">Техническое задание и чеклист разработки. Отмечайте выполненные пункты — прогресс сохраняется в браузере.</p>
+		</header>
+
+		<div class="progress-bar-wrap">
+			<div class="progress-label">
+				<span>Общий прогресс</span>
+				<span id="progress-text">0 / 0</span>
+			</div>
+			<div class="progress-bar">
+				<div class="progress-fill" id="progress-fill"></div>
+			</div>
+		</div>
+
+		<div class="actions">
+			<button type="button" class="primary" id="expand-all">Развернуть все</button>
+			<button type="button" id="collapse-all">Свернуть все</button>
+			<button type="button" id="reset-progress">Сбросить прогресс</button>
+		</div>
+
+		<div class="legend">
+			<span><span class="badge badge-p0">P0</span> критично</span>
+			<span><span class="badge badge-p1">P1</span> важно</span>
+			<span><span class="badge badge-p2">P2</span> средний</span>
+			<span><span class="badge badge-p3">P3</span> низкий</span>
+			<span><span class="badge badge-done">✓</span> MVP готово</span>
+			<span><span class="badge badge-partial">~</span> частично</span>
+		</div>
+
+		<!-- Текущее состояние -->
+		<section class="phase" data-phase="current">
+			<div class="phase-header">
+				<h2 class="phase-title">Текущее состояние (MVP на apis.beautytrust.ru)</h2>
+				<span class="phase-meta" data-phase-progress></span>
+			</div>
+			<div class="phase-body">
+				<table class="status-table">
+					<thead>
+						<tr>
+							<th>Область</th>
+							<th>Статус</th>
+							<th>Комментарий</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr><td>Записи (CRUD)</td><td><span class="badge badge-partial">~</span></td><td>Нет DELETE</td></tr>
+						<tr><td>Проверка клиента</td><td><span class="badge badge-done">✓</span></td><td>POST /api/clients/check</td></tr>
+						<tr><td>Сообщество</td><td><span class="badge badge-done">✓</span></td><td>Темы и сообщения</td></tr>
+						<tr><td>Поддержка</td><td><span class="badge badge-done">✓</span></td><td>Тикеты, чат, отмена</td></tr>
+						<tr><td>Профиль мастера</td><td><span class="badge badge-partial">~</span></td><td>API есть, фронт не подключён</td></tr>
+						<tr><td>Услуги мастера</td><td><span class="badge badge-partial">~</span></td><td>API есть, фронт — локальный список</td></tr>
+						<tr><td>Статистика Home</td><td><span class="badge badge-partial">~</span></td><td>Захардкожена на бэке и фронте</td></tr>
+						<tr><td>Платежи T-Bank</td><td><span class="badge badge-partial">~</span></td><td>Init/Status, не связаны с тарифами</td></tr>
+						<tr><td>Авторизация</td><td><span class="badge badge-p0">✗</span></td><td>demo_master_id, без токенов</td></tr>
+						<tr><td>История проверок</td><td><span class="badge badge-p0">✗</span></td><td>Модель есть, API нет</td></tr>
+						<tr><td>Аватар</td><td><span class="badge badge-p0">✗</span></td><td>Только раздача /uploads</td></tr>
+						<tr><td>Регистрация / OTP / PIN</td><td><span class="badge badge-p0">✗</span></td><td>Только на фронте</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<!-- Этап 0 -->
+		<section class="phase" data-phase="0">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 0 — Фундамент</h2>
+				<span class="phase-meta" data-phase-progress>1–2 недели</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>0.1 Аутентификация и мультитенантность <span class="badge badge-p0">P0</span></h4>
+					<label class="task"><input type="checkbox" data-id="0-1-1"><span class="task-text"><code>POST /api/auth/register</code><span class="task-note">Имя, телефон, email, пароль</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2" checked><span class="task-text"><code>POST /api/auth/otp/send</code> + <code>POST /api/auth/otp/verify</code><span class="task-note">OTP через @BeautyTrust_bot</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2b" checked><span class="task-text">Telegram webhook <code>/api/auth/telegram/webhook</code><span class="task-note">t.me/BeautyTrust_bot</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-3"><span class="task-text"><code>POST /api/auth/login</code> / <code>refresh</code> / <code>logout</code><span class="task-note">JWT access + refresh</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-4"><span class="task-text">Middleware авторизации на все <code>/api/*</code><span class="task-note">Кроме auth и health</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-5"><span class="task-text">Привязка данных к <code>master_id</code> из токена<span class="task-note">Убрать demo_master_id</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-6"><span class="task-text">Фронт: <code>Authorization: Bearer</code> в BeautyTrustApi<span class="task-note">Secure storage для сессии</span></span></label>
+				</div>
+				<div class="task-group">
+					<h4>0.2 Базовая инфраструктура <span class="badge badge-p0">P0</span></h4>
+					<label class="task"><input type="checkbox" data-id="0-2-1"><span class="task-text">Перенос платежей из SQLite в Postgres</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-2"><span class="task-text">Alembic-миграции для всех изменений схемы</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-3"><span class="task-text">Структурированные ошибки API (<code>code</code>, <code>message</code>, <code>details</code>)</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-4"><span class="task-text">Логирование запросов и ошибок</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-5"><span class="task-text">Rate limiting на auth и client check</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-6"><span class="task-text">Валидация: телефон, enum-ы, границы цен и дат</span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Этап 1 -->
+		<section class="phase" data-phase="1">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 1 — Ядро бизнес-логики</h2>
+				<span class="phase-meta" data-phase-progress>2–3 недели</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>1.1 Записи (доработка) <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="1-1-1"><span class="task-text"><code>DELETE /api/appointments/{id}</code><span class="task-note">Подключить кнопку на фронте</span></span></label>
+					<label class="task"><input type="checkbox" data-id="1-1-2"><span class="task-text"><code>GET /api/appointments/{id}</code><span class="task-note">Детальный экран</span></span></label>
+					<label class="task"><input type="checkbox" data-id="1-1-3"><span class="task-text"><code>GET /api/appointments?from=&to=</code><span class="task-note">Фильтрация по дате</span></span></label>
+					<label class="task"><input type="checkbox" data-id="1-1-4"><span class="task-text">Пагинация списков (<code>limit</code>, <code>offset</code>)</span></label>
+				</div>
+				<div class="task-group">
+					<h4>1.2 Проверка клиентов <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="1-2-1"><span class="task-text">Сохранение проверки в <code>check_history_records</code> при check</span></label>
+					<label class="task"><input type="checkbox" data-id="1-2-2"><span class="task-text"><code>GET /api/checks/history?filter=all|reliable|risky</code></span></label>
+					<label class="task"><input type="checkbox" data-id="1-2-3"><span class="task-text">Фронт: заменить CheckHistoryDataService на API</span></label>
+				</div>
+				<div class="task-group">
+					<h4>1.3 Статистика Home (дашборд) <span class="badge badge-p0">P0</span></h4>
+					<label class="task"><input type="checkbox" data-id="1-3-1"><span class="task-text">Реальный расчёт <code>GET /api/dashboard/stats?year=&month=</code></span></label>
+					<label class="task"><input type="checkbox" data-id="1-3-2"><span class="task-text"><code>GET /api/dashboard/periods</code></span></label>
+					<label class="task"><input type="checkbox" data-id="1-3-3"><span class="task-text">Фронт: DashboardDataService.statsFor() → API</span></label>
+				</div>
+				<div class="task-group">
+					<h4>1.4 Услуги мастера <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="1-4-1"><span class="task-text">FK <code>master_id</code> в master_services</span></label>
+					<label class="task"><input type="checkbox" data-id="1-4-2"><span class="task-text"><code>POST/PATCH/DELETE /api/master/services</code></span></label>
+					<label class="task"><input type="checkbox" data-id="1-4-3"><span class="task-text">Фронт: заменить MasterServicesData на API</span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Этап 2 -->
+		<section class="phase" data-phase="2">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 2 — Профиль мастера</h2>
+				<span class="phase-meta" data-phase-progress>1–2 недели</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>2.1 Профиль <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="2-1-1"><span class="task-text">Фронт: подключить <code>fetchProfile()</code> вместо MasterProfileService</span></label>
+					<label class="task"><input type="checkbox" data-id="2-1-2"><span class="task-text"><code>PATCH /api/profile</code> — имя, email</span></label>
+					<label class="task"><input type="checkbox" data-id="2-1-3"><span class="task-text">Статистика профиля из БД (clients_count, reviews_count, years)</span></label>
+				</div>
+				<div class="task-group">
+					<h4>2.2 Аватар <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="2-2-1"><span class="task-text"><code>POST /api/profile/avatar</code> (multipart upload)</span></label>
+					<label class="task"><input type="checkbox" data-id="2-2-2"><span class="task-text"><code>DELETE /api/profile/avatar</code></span></label>
+					<label class="task"><input type="checkbox" data-id="2-2-3"><span class="task-text">Фронт: MasterAvatarService → upload на сервер</span></label>
+				</div>
+				<div class="task-group">
+					<h4>2.3 Расширения профиля <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="2-3-1"><span class="task-text"><code>GET /api/profile/stats</code> — детальная аналитика</span></label>
+					<label class="task"><input type="checkbox" data-id="2-3-2"><span class="task-text"><code>GET /api/profile/reviews</code></span></label>
+					<label class="task"><input type="checkbox" data-id="2-3-3"><span class="task-text"><code>GET/PATCH /api/profile/settings</code></span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Этап 3 -->
+		<section class="phase" data-phase="3">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 3 — Тарифы и платежи</h2>
+				<span class="phase-meta" data-phase-progress>2 недели</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>3.1 Модель подписок <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="3-1-1"><span class="task-text">Таблицы: tariff_plans, subscription_payments</span></label>
+					<label class="task"><input type="checkbox" data-id="3-1-2"><span class="task-text">Поля masters: tariff_plan_id, tariff_expires_at</span></label>
+				</div>
+				<div class="task-group">
+					<h4>3.2 API тарифов <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="3-2-1"><span class="task-text"><code>GET /api/tariffs</code></span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-2"><span class="task-text"><code>GET /api/profile/subscription</code></span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-3"><span class="task-text"><code>POST /api/tariffs/{plan_id}/subscribe</code> → T-Bank Init</span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-4"><span class="task-text">Активация подписки после CONFIRMED</span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-5"><span class="task-text">Фронт: обновление тарифа в профиле после оплаты</span></label>
+				</div>
+				<div class="task-group">
+					<h4>3.3 T-Bank (доработка) <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="3-3-1"><span class="task-text"><code>POST /api/payments/webhook</code></span></label>
+					<label class="task"><input type="checkbox" data-id="3-3-2"><span class="task-text">Привязка order_id к master_id + plan_id</span></label>
+					<label class="task"><input type="checkbox" data-id="3-3-3"><span class="task-text">Перенос payments в Postgres</span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Этап 4 -->
+		<section class="phase" data-phase="4">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 4 — Сообщество и поддержка</h2>
+				<span class="phase-meta" data-phase-progress>1–2 недели</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>4.1 Сообщество <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="4-1-1"><span class="task-text">author_name из токена (не хардкод)</span></label>
+					<label class="task"><input type="checkbox" data-id="4-1-2"><span class="task-text">Пагинация тем и сообщений</span></label>
+					<label class="task"><input type="checkbox" data-id="4-1-3"><span class="task-text"><code>PATCH /api/community/topics/{id}/read</code></span></label>
+					<label class="task"><input type="checkbox" data-id="4-1-4"><span class="task-text"><code>POST /api/community/topics/{id}/close</code></span></label>
+				</div>
+				<div class="task-group">
+					<h4>4.2 Поддержка <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="4-2-1"><span class="task-text">Убрать авто-бота, реальная очередь агентов</span></label>
+					<label class="task"><input type="checkbox" data-id="4-2-2"><span class="task-text">Админ-панель тикетов</span></label>
+					<label class="task"><input type="checkbox" data-id="4-2-3"><span class="task-text">Push при ответе поддержки</span></label>
+					<label class="task"><input type="checkbox" data-id="4-2-4"><span class="task-text"><code>POST /api/support/tickets/{id}/attachments</code></span></label>
+				</div>
+				<div class="task-group">
+					<h4>4.3 Уведомления <span class="badge badge-p2">P2</span></h4>
+					<label class="task"><input type="checkbox" data-id="4-3-1"><span class="task-text">Таблицы device_tokens, notifications</span></label>
+					<label class="task"><input type="checkbox" data-id="4-3-2"><span class="task-text"><code>POST /api/devices/register</code></span></label>
+					<label class="task"><input type="checkbox" data-id="4-3-3"><span class="task-text"><code>GET /api/notifications</code></span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Этап 5 -->
+		<section class="phase" data-phase="5">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 5 — Расширенная бизнес-логика</h2>
+				<span class="phase-meta" data-phase-progress>2–3 недели</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>5.1 Рейтинг и риск клиента <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="5-1-1"><span class="task-text">Пересчёт client_rating после visit-result</span></label>
+					<label class="task"><input type="checkbox" data-id="5-1-2"><span class="task-text">Обновление risk_level по правилам</span></label>
+					<label class="task"><input type="checkbox" data-id="5-1-3"><span class="task-text">days_since_verified из последней проверки</span></label>
+					<label class="task"><input type="checkbox" data-id="5-1-4"><span class="task-text"><code>POST /api/clients/{phone}/reviews</code></span></label>
+				</div>
+				<div class="task-group">
+					<h4>5.2 Результат визита → аналитика <span class="badge badge-p1">P1</span></h4>
+					<label class="task"><input type="checkbox" data-id="5-2-1"><span class="task-text">Статусы записи: scheduled / completed / no_show / cancelled</span></label>
+					<label class="task"><input type="checkbox" data-id="5-2-2"><span class="task-text">Агрегации для дашборда и профиля</span></label>
+					<label class="task"><input type="checkbox" data-id="5-2-3"><span class="task-text"><code>GET /api/reports/appointments?format=csv</code></span></label>
+				</div>
+				<div class="task-group">
+					<h4>5.3 Онбординг <span class="badge badge-p3">P3</span></h4>
+					<label class="task"><input type="checkbox" data-id="5-3-1"><span class="task-text"><code>POST /api/profile/onboarding/complete</code></span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Этап 6 -->
+		<section class="phase" data-phase="6">
+			<div class="phase-header">
+				<h2 class="phase-title">Этап 6 — Продакшен и масштабирование</h2>
+				<span class="phase-meta" data-phase-progress>ongoing</span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>6.1 Безопасность и инфраструктура</h4>
+					<label class="task"><input type="checkbox" data-id="6-1-1"><span class="task-text">HTTPS only, секреты в vault</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-2"><span class="task-text">Audit log изменений</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-3"><span class="task-text">Индексы БД, кэш Redis</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-4"><span class="task-text">Мониторинг: Sentry, Prometheus</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-5"><span class="task-text">CI/CD: GitHub Actions (тесты → deploy)</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-6"><span class="task-text">pytest: unit + integration</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-7"><span class="task-text">Ежедневный backup Postgres</span></label>
+					<label class="task"><input type="checkbox" data-id="6-1-8"><span class="task-text">Cron обновления SSL (certbot)</span></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- Спринты -->
+		<section class="phase" data-phase="sprints">
+			<div class="phase-header">
+				<h2 class="phase-title">Спринты (краткий план)</h2>
+				<span class="phase-meta" data-phase-progress></span>
+			</div>
+			<div class="phase-body">
+				<div class="task-group">
+					<h4>Sprint 1 — ближайшие 2 недели</h4>
+					<label class="task"><input type="checkbox" data-id="s1-1"><span class="task-text">Auth (OTP + JWT)</span></label>
+					<label class="task"><input type="checkbox" data-id="s1-2"><span class="task-text">Привязка эндпоинтов к master_id</span></label>
+					<label class="task"><input type="checkbox" data-id="s1-3"><span class="task-text">Реальная статистика дашборда</span></label>
+					<label class="task"><input type="checkbox" data-id="s1-4"><span class="task-text">История проверок</span></label>
+					<label class="task"><input type="checkbox" data-id="s1-5"><span class="task-text">DELETE /api/appointments/{id}</span></label>
+				</div>
+				<div class="task-group">
+					<h4>Sprint 2</h4>
+					<label class="task"><input type="checkbox" data-id="s2-1"><span class="task-text">Профиль + аватар</span></label>
+					<label class="task"><input type="checkbox" data-id="s2-2"><span class="task-text">Услуги мастера (CRUD + фронт)</span></label>
+					<label class="task"><input type="checkbox" data-id="s2-3"><span class="task-text">Платежи → подписки</span></label>
+				</div>
+				<div class="task-group">
+					<h4>Sprint 3</h4>
+					<label class="task"><input type="checkbox" data-id="s3-1"><span class="task-text">Поддержка без бота + админка</span></label>
+					<label class="task"><input type="checkbox" data-id="s3-2"><span class="task-text">Push-уведомления</span></label>
+					<label class="task"><input type="checkbox" data-id="s3-3"><span class="task-text">Пересчёт рейтинга клиентов</span></label>
+				</div>
+			</div>
+		</section>
+
+		<footer>
+			Beauty Trust · API: <a href="https://apis.beautytrust.ru" style="color: var(--secondary)">apis.beautytrust.ru</a> ·
+			Репозиторий: <a href="https://github.com/alexdev1cteam-art/beautytrust" style="color: var(--secondary)">github.com/alexdev1cteam-art/beautytrust</a><br>
+			Прогресс сохраняется в localStorage браузера (ключ <code>beautytrust-tz-progress</code>).
+		</footer>
+	</div>
+
+	<script>
+		const STORAGE_KEY = 'beautytrust-tz-progress';
+
+		function loadProgress() {
+			try {
+				return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+			} catch {
+				return {};
+			}
+		}
+
+		function saveProgress(data) {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+		}
+
+		function updateUI() {
+			const progress = loadProgress();
+			const checkboxes = document.querySelectorAll('input[type="checkbox"][data-id]');
+			let done = 0;
+
+			checkboxes.forEach((cb) => {
+				const id = cb.dataset.id;
+				cb.checked = !!progress[id];
+				cb.closest('.task').classList.toggle('done', cb.checked);
+				if (cb.checked) done++;
+			});
+
+			const total = checkboxes.length;
+			const pct = total ? Math.round((done / total) * 100) : 0;
+			document.getElementById('progress-fill').style.width = pct + '%';
+			document.getElementById('progress-text').textContent = done + ' / ' + total + ' (' + pct + '%)';
+
+			document.querySelectorAll('.phase[data-phase]').forEach((phase) => {
+				const phaseChecks = phase.querySelectorAll('input[type="checkbox"][data-id]');
+				if (!phaseChecks.length) return;
+				let phaseDone = 0;
+				phaseChecks.forEach((cb) => { if (cb.checked) phaseDone++; });
+				const meta = phase.querySelector('[data-phase-progress]');
+				if (meta && phaseChecks.length) {
+					const original = meta.dataset.original || meta.textContent;
+					if (!meta.dataset.original) meta.dataset.original = original;
+					meta.textContent = phaseDone + '/' + phaseChecks.length + (original && !original.includes('/') ? ' · ' + original : '');
+				}
+			});
+		}
+
+		document.querySelectorAll('input[type="checkbox"][data-id]').forEach((cb) => {
+			cb.addEventListener('change', () => {
+				const progress = loadProgress();
+				progress[cb.dataset.id] = cb.checked;
+				saveProgress(progress);
+				updateUI();
+			});
+		});
+
+		document.querySelectorAll('.phase-header').forEach((header) => {
+			header.addEventListener('click', (e) => {
+				if (e.target.type === 'checkbox') return;
+				header.closest('.phase').classList.toggle('collapsed');
+			});
+		});
+
+		document.getElementById('expand-all').addEventListener('click', () => {
+			document.querySelectorAll('.phase').forEach((p) => p.classList.remove('collapsed'));
+		});
+
+		document.getElementById('collapse-all').addEventListener('click', () => {
+			document.querySelectorAll('.phase').forEach((p) => p.classList.add('collapsed'));
+		});
+
+		document.getElementById('reset-progress').addEventListener('click', () => {
+			if (confirm('Сбросить все отметки прогресса?')) {
+				localStorage.removeItem(STORAGE_KEY);
+				updateUI();
+			}
+		});
+
+		updateUI();
+	</script>
+</body>
+</html>

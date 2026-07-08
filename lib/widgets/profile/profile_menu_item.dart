@@ -8,16 +8,23 @@ class ProfileMenuItem extends StatelessWidget {
 		required this.icon,
 		required this.title,
 		this.trailingLabel,
+		this.isDestructive = false,
+		this.showChevron = true,
 		required this.onTap,
 	});
 
 	final IconData icon;
 	final String title;
 	final String? trailingLabel;
+	final bool isDestructive;
+	final bool showChevron;
 	final VoidCallback onTap;
 
 	@override
 	Widget build(BuildContext context) {
+		final itemColor = isDestructive ? AppColors.error : AppColors.textPrimary;
+		final iconColor = isDestructive ? AppColors.error : AppColors.textMuted;
+
 		return Material(
 			color: Colors.transparent,
 			child: InkWell(
@@ -29,14 +36,14 @@ class ProfileMenuItem extends StatelessWidget {
 							Icon(
 								icon,
 								size: 22,
-								color: AppColors.textMuted,
+								color: iconColor,
 							),
 							const SizedBox(width: 14),
 							Expanded(
 								child: Text(
 									title,
-									style: const TextStyle(
-										color: AppColors.textPrimary,
+									style: TextStyle(
+										color: itemColor,
 										fontSize: 16,
 										fontWeight: FontWeight.w500,
 									),
@@ -52,11 +59,12 @@ class ProfileMenuItem extends StatelessWidget {
 								),
 								const SizedBox(width: 6),
 							],
-							const Icon(
-								Icons.chevron_right_rounded,
-								color: AppColors.textMuted,
-								size: 20,
-							),
+							if (showChevron)
+								const Icon(
+									Icons.chevron_right_rounded,
+									color: AppColors.textMuted,
+									size: 20,
+								),
 						],
 					),
 				),

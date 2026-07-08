@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/appointment_record.dart';
 import '../../models/master_profile.dart';
+import '../../services/auth_session.dart';
 import '../../services/master_avatar_service.dart';
 import '../../services/master_profile_service.dart';
 import '../../theme/app_theme.dart';
@@ -9,6 +10,7 @@ import '../../widgets/app_snack_bar.dart';
 import '../../widgets/profile/avatar_picker_sheet.dart';
 import '../../widgets/profile/master_avatar.dart';
 import '../../widgets/profile/profile_menu_item.dart';
+import '../auth/phone_login_screen.dart';
 import '../support/support_tickets_screen.dart';
 import 'tariffs_screen.dart';
 
@@ -93,6 +95,11 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 	}
 
 	void _onMenuTap(BuildContext context, MasterProfileMenuItem item) {
+		if (item == MasterProfileMenuItem.logout) {
+			_confirmLogout(context);
+			return;
+		}
+
 		if (item == MasterProfileMenuItem.tariff) {
 			Navigator.of(context).pushNamed(TariffsScreen.routeName);
 			return;
@@ -106,6 +113,49 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 		AppSnackBar.show(
 			context,
 			'«${item.title}» скоро будет доступно',
+		);
+	}
+
+	Future<void> _confirmLogout(BuildContext context) async {
+		final rootNavigator = Navigator.of(context, rootNavigator: true);
+		final shouldLogout = await showDialog<bool>(
+			context: context,
+			builder: (dialogContext) {
+				return AlertDialog(
+					title: const Text('Выйти из аккаунта?'),
+					content: const Text(
+						'PIN-код и данные входа будут удалены с этого устройства.',
+					),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(false),
+							child: const Text('Отмена'),
+						),
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(true),
+							child: const Text(
+								'Выйти',
+								style: TextStyle(color: AppColors.error),
+							),
+						),
+					],
+				);
+			},
+		);
+
+		if (shouldLogout != true || !mounted) {
+			return;
+		}
+
+		await AuthSession.clearAll();
+
+		if (!mounted) {
+			return;
+		}
+
+		rootNavigator.pushAndRemoveUntil(
+			MaterialPageRoute(builder: (context) => const PhoneLoginScreen()),
+			(_) => false,
 		);
 	}
 }
@@ -351,6 +401,14 @@ class _ProfileMenuCard extends StatelessWidget {
 						icon: Icons.info_outline_rounded,
 						title: MasterProfileMenuItem.support.title,
 						onTap: () => onItemTap(MasterProfileMenuItem.support),
+					),
+					const Divider(color: AppColors.border, height: 1),
+					ProfileMenuItem(
+						icon: Icons.logout_rounded,
+						title: MasterProfileMenuItem.logout.title,
+						isDestructive: true,
+						showChevron: false,
+						onTap: () => onItemTap(MasterProfileMenuItem.logout),
 					),
 				],
 			),

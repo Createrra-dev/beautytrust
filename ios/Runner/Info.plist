@@ -64,5 +64,7 @@
 	<string>Нужен доступ к камере, чтобы сделать фото для аватара профиля.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Нужен доступ к фотографиям, чтобы выбрать аватар профиля.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID используется для быстрого и безопасного входа в приложение.</string>
 </dict>
 </plist>

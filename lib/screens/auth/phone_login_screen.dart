@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api/auth_api.dart';
+import '../../services/api/beauty_trust_api.dart';
 import '../../services/auth_session.dart';
+import '../../widgets/app_snack_bar.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
 import '../../widgets/app_logo.dart';
@@ -8,7 +11,7 @@ import '../../widgets/auth/auth_buttons.dart';
 import '../../widgets/auth/auth_scaffold.dart';
 import '../../widgets/auth/phone_text_field.dart';
 import '../../widgets/brand_title.dart';
-import 'otp_code_screen.dart';
+import 'otp_method_screen.dart';
 import 'pin_code_screen.dart';
 import 'registration_screen.dart';
 
@@ -20,12 +23,22 @@ class PhoneLoginScreen extends StatefulWidget {
 }
 
 class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
+	final _authApi = AuthApi();
 	final _phoneController = TextEditingController();
+	bool _hasValidPin = false;
+	bool _isSubmitting = false;
 
 	@override
 	void initState() {
 		super.initState();
 		_phoneController.addListener(_onPhoneChanged);
+		AuthSession.load();
+	}
+
+	@override
+	void didChangeDependencies() {
+		super.didChangeDependencies();
+		_updatePinAvailability();
 	}
 
 	@override
@@ -36,19 +49,89 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 	}
 
 	void _onPhoneChanged() {
-		setState(() {});
+		_updatePinAvailability();
 	}
 
-	void _continue() {
+	Future<void> _updatePinAvailability() async {
 		final digits = extractPhoneDigits(_phoneController.text);
-		if (digits.length != 10) {
+		final hasValidPin = digits.length == 10
+			&& await AuthSession.hasStoredPinForPhone(digits);
+
+		if (!mounted) {
 			return;
 		}
 
-		Navigator.of(context).push(
-			MaterialPageRoute(
-				builder: (context) => OtpCodeScreen(phoneDigits: digits),
-			),
+		setState(() {
+			_hasValidPin = hasValidPin;
+		});
+	}
+
+	Future<void> _continue() async {
+		final digits = extractPhoneDigits(_phoneController.text);
+		if (digits.length != 10 || _isSubmitting) {
+			return;
+		}
+
+		setState(() => _isSubmitting = true);
+
+		try {
+			final isRegistered = await _authApi.isPhoneRegistered(digits);
+			if (!mounted) {
+				return;
+			}
+
+			setState(() => _isSubmitting = false);
+
+			if (!isRegistered) {
+				await _showNotRegisteredDialog(digits);
+				return;
+			}
+
+			Navigator.of(context).push(
+				MaterialPageRoute(
+					builder: (context) => OtpMethodScreen(phoneDigits: digits),
+				),
+			);
+		} on ApiException catch (error) {
+			if (!mounted) {
+				return;
+			}
+
+			setState(() => _isSubmitting = false);
+			AppSnackBar.show(context, error.message);
+		}
+	}
+
+	Future<void> _showNotRegisteredDialog(String phoneDigits) async {
+		await showDialog<void>(
+			context: context,
+			builder: (dialogContext) {
+				return AlertDialog(
+					title: const Text('Вы не зарегистрированы'),
+					content: const Text(
+						'Пройдите регистрацию, чтобы создать аккаунт и начать пользоваться программой.',
+					),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(),
+							child: const Text('Отмена'),
+						),
+						TextButton(
+							onPressed: () {
+								Navigator.of(dialogContext).pop();
+								Navigator.of(context).push(
+									MaterialPageRoute(
+										builder: (context) => RegistrationScreen(
+											initialPhoneDigits: phoneDigits,
+										),
+									),
+								);
+							},
+							child: const Text('Зарегистрироваться'),
+						),
+					],
+				);
+			},
 		);
 	}
 
@@ -104,8 +187,8 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 						PhoneTextField(controller: _phoneController),
 						const SizedBox(height: 24),
 						PrimaryAuthButton(
-							label: 'Продолжить',
-							onPressed: phoneComplete ? _continue : null,
+							label: _isSubmitting ? 'Проверяем номер...' : 'Продолжить',
+							onPressed: phoneComplete && !_isSubmitting ? _continue : null,
 						),
 						const SizedBox(height: 24),
 						const AuthDivider(),
@@ -124,13 +207,16 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 						const SizedBox(height: 24),
 						_wrapLegalText(context),
 						const SizedBox(height: 16),
-						if (AuthSession.pinCode != null)
+						if (_hasValidPin)
 							TextButton(
 								onPressed: () {
+									final digits = extractPhoneDigits(_phoneController.text);
 									Navigator.of(context).push(
 										MaterialPageRoute(
-											builder: (context) => const PinCodeScreen(
+											builder: (context) => PinCodeScreen(
 												mode: PinCodeMode.entry,
+												phoneDigits: digits,
+												tryBiometricOnOpen: true,
 											),
 										),
 									);

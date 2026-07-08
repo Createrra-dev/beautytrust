@@ -26,6 +26,7 @@ enum MasterProfileMenuItem {
 	tariff,
 	settings,
 	support,
+	logout,
 }
 
 extension MasterProfileMenuItemX on MasterProfileMenuItem {
@@ -36,6 +37,7 @@ extension MasterProfileMenuItemX on MasterProfileMenuItem {
 			MasterProfileMenuItem.tariff => 'Тариф',
 			MasterProfileMenuItem.settings => 'Настройки',
 			MasterProfileMenuItem.support => 'Поддержка',
+			MasterProfileMenuItem.logout => 'Выйти',
 		};
 	}
 }
