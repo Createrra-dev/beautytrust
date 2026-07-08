@@ -36,6 +36,15 @@ def _format_phone(digits: str) -> str:
 	return f"+7 ({digits[0:3]}) {digits[3:6]}-{digits[6:8]}-{digits[8:10]}"
 
 
+def _initials(name: str) -> str:
+	parts = [part for part in name.strip().split() if part]
+	if not parts:
+		return "?"
+	if len(parts) == 1:
+		return parts[0][0].upper()
+	return f"{parts[0][0]}{parts[1][0]}".upper()
+
+
 def _profile_schema(profile: models.ClientProfile) -> ClientProfileSchema:
 	return ClientProfileSchema(
 		phone=_format_phone(profile.phone_digits),
@@ -85,6 +94,40 @@ def _appointment_schema(appointment: models.Appointment) -> AppointmentSchema:
 	)
 
 
+def _get_master_appointment(
+	db: Session,
+	master_id: int,
+	appointment_id: str,
+) -> models.Appointment:
+	appointment = db.scalar(
+		select(models.Appointment)
+		.options(joinedload(models.Appointment.visit_result))
+		.where(
+			models.Appointment.external_id == appointment_id,
+			models.Appointment.master_id == master_id,
+		)
+	)
+	if appointment is None:
+		raise HTTPException(status_code=404, detail="Appointment not found")
+	return appointment
+
+
+def _get_master_support_ticket(
+	db: Session,
+	master_id: int,
+	ticket_id: str,
+) -> models.SupportTicket:
+	ticket = db.scalar(
+		select(models.SupportTicket).where(
+			models.SupportTicket.external_id == ticket_id,
+			models.SupportTicket.master_id == master_id,
+		)
+	)
+	if ticket is None:
+		raise HTTPException(status_code=404, detail="Ticket not found")
+	return ticket
+
+
 @router.get("/health")
 async def api_health() -> dict[str, str]:
 	return {"status": "ok", "service": "beautytrust-api"}
@@ -115,15 +158,16 @@ async def get_profile(master: models.Master = Depends(get_current_master)) -> Ma
 async def get_dashboard_stats(
 	year: int = Query(default=2026),
 	month: int = Query(default=7),
+	master: models.Master = Depends(get_current_master),
 ) -> DashboardStatsSchema:
-	_ = (year, month)
+	_ = (year, month, master)
 	return DashboardStatsSchema(
 		period_label="Июль 2026",
-		protected_income=182000,
+		protected_income=master.protected_income or 0,
 		income_trend_label="+18% к июню",
 		income_trend_positive=True,
 		sparkline_values=[0.4, 0.45, 0.5, 0.48, 0.58, 0.62, 0.7, 0.68, 0.8, 0.86, 0.92, 1.0],
-		prevented_no_shows=15,
+		prevented_no_shows=master.prevented_no_shows or 0,
 		no_shows_trend_label="-2 к июню",
 		completed_checks=268,
 		checks_trend_label="+24 к июню",
@@ -131,7 +175,11 @@ async def get_dashboard_stats(
 
 
 @router.get("/master/services", response_model=list[MasterServiceSchema])
-async def list_services(db: Session = Depends(get_db)) -> list[MasterServiceSchema]:
+async def list_services(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[MasterServiceSchema]:
+	_ = master
 	services = db.scalars(select(models.MasterService).order_by(models.MasterService.id)).all()
 	return [
 		MasterServiceSchema(
@@ -145,11 +193,14 @@ async def list_services(db: Session = Depends(get_db)) -> list[MasterServiceSche
 
 
 @router.get("/appointments", response_model=list[AppointmentSchema])
-async def list_appointments(db: Session = Depends(get_db)) -> list[AppointmentSchema]:
+async def list_appointments(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[AppointmentSchema]:
 	appointments = db.scalars(
 		select(models.Appointment)
 		.options(joinedload(models.Appointment.visit_result))
-		.where(models.Appointment.master_id == settings.demo_master_id)
+		.where(models.Appointment.master_id == master.id)
 		.order_by(models.Appointment.scheduled_at)
 	).unique().all()
 	return [_appointment_schema(item) for item in appointments]
@@ -159,11 +210,12 @@ async def list_appointments(db: Session = Depends(get_db)) -> list[AppointmentSc
 async def create_appointment(
 	body: AppointmentCreateRequest,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> AppointmentSchema:
 	external_id = f"appointment-{int(datetime.now(timezone.utc).timestamp())}"
 	appointment = models.Appointment(
 		external_id=external_id,
-		master_id=settings.demo_master_id,
+		master_id=master.id,
 		client_name=body.client_name,
 		client_phone_digits=body.client_phone_digits,
 		service_name=body.service_name,
@@ -185,14 +237,9 @@ async def update_appointment(
 	appointment_id: str,
 	body: AppointmentUpdateRequest,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> AppointmentSchema:
-	appointment = db.scalar(
-		select(models.Appointment)
-		.options(joinedload(models.Appointment.visit_result))
-		.where(models.Appointment.external_id == appointment_id)
-	)
-	if appointment is None:
-		raise HTTPException(status_code=404, detail="Appointment not found")
+	appointment = _get_master_appointment(db, master.id, appointment_id)
 
 	for field, value in body.model_dump(exclude_unset=True).items():
 		setattr(appointment, field, value)
@@ -207,14 +254,9 @@ async def save_visit_result(
 	appointment_id: str,
 	body: VisitResultSchema,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> AppointmentSchema:
-	appointment = db.scalar(
-		select(models.Appointment)
-		.options(joinedload(models.Appointment.visit_result))
-		.where(models.Appointment.external_id == appointment_id)
-	)
-	if appointment is None:
-		raise HTTPException(status_code=404, detail="Appointment not found")
+	appointment = _get_master_appointment(db, master.id, appointment_id)
 
 	if appointment.visit_result:
 		visit_result = appointment.visit_result
@@ -238,7 +280,12 @@ async def save_visit_result(
 
 
 @router.post("/clients/check", response_model=ClientCheckResponse)
-async def check_client(body: PhoneCheckRequest, db: Session = Depends(get_db)) -> ClientCheckResponse:
+async def check_client(
+	body: PhoneCheckRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> ClientCheckResponse:
+	_ = master
 	digits = "".join(char for char in body.phone if char.isdigit())
 	if len(digits) == 11 and digits.startswith("7"):
 		digits = digits[1:]
@@ -263,7 +310,9 @@ async def check_client(body: PhoneCheckRequest, db: Session = Depends(get_db)) -
 async def list_topics(
 	q: str = "",
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> list[CommunityTopicSchema]:
+	_ = master
 	topics = db.scalars(select(models.CommunityTopic).order_by(models.CommunityTopic.last_message_at.desc())).all()
 	result = []
 	for topic in topics:
@@ -291,16 +340,19 @@ async def list_topics(
 async def create_topic(
 	body: CommunityTopicCreateRequest,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> CommunityTopicSchema:
 	now = datetime.now(timezone.utc)
 	external_id = f"topic-{int(now.timestamp())}"
+	author_name = master.first_name
+	author_initial = _initials(author_name)
 	topic = models.CommunityTopic(
 		external_id=external_id,
 		title=body.title.strip(),
-		author_name="Анна",
+		author_name=author_name,
 		emoji="✨",
 		participant_count=1,
-		participant_initials="А",
+		participant_initials=author_initial,
 		last_message=body.story.strip(),
 		last_message_at=now,
 	)
@@ -310,7 +362,7 @@ async def create_topic(
 		models.CommunityMessage(
 			external_id=f"m-{int(now.timestamp())}",
 			topic_id=topic.id,
-			author_name="Анна",
+			author_name=author_name,
 			text=body.story.strip(),
 			sent_at=now,
 			is_mine=True,
@@ -326,7 +378,7 @@ async def create_topic(
 		participant_count=topic.participant_count,
 		last_message=topic.last_message,
 		last_message_at=topic.last_message_at,
-		participant_initials=["А"],
+		participant_initials=[author_initial],
 		unread_count=0,
 		is_pinned=False,
 		emoji=topic.emoji,
@@ -334,7 +386,11 @@ async def create_topic(
 
 
 @router.get("/community/topics/{topic_id}/messages", response_model=list[CommunityMessageSchema])
-async def list_topic_messages(topic_id: str, db: Session = Depends(get_db)) -> list[CommunityMessageSchema]:
+async def list_topic_messages(
+	topic_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[CommunityMessageSchema]:
 	topic = db.scalar(select(models.CommunityTopic).where(models.CommunityTopic.external_id == topic_id))
 	if topic is None:
 		raise HTTPException(status_code=404, detail="Topic not found")
@@ -351,7 +407,7 @@ async def list_topic_messages(topic_id: str, db: Session = Depends(get_db)) -> l
 			author_name=message.author_name,
 			text=message.text,
 			sent_at=message.sent_at,
-			is_mine=message.is_mine,
+			is_mine=message.author_name == master.first_name,
 		)
 		for message in messages
 	]
@@ -362,6 +418,7 @@ async def send_topic_message(
 	topic_id: str,
 	body: CommunityMessageCreateRequest,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> CommunityMessageSchema:
 	topic = db.scalar(select(models.CommunityTopic).where(models.CommunityTopic.external_id == topic_id))
 	if topic is None:
@@ -371,7 +428,7 @@ async def send_topic_message(
 	message = models.CommunityMessage(
 		external_id=f"m-{int(now.timestamp())}",
 		topic_id=topic.id,
-		author_name="Анна",
+		author_name=master.first_name,
 		text=body.text.strip(),
 		sent_at=now,
 		is_mine=True,
@@ -394,10 +451,11 @@ async def send_topic_message(
 async def list_support_tickets(
 	q: str = "",
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> list[SupportTicketSchema]:
 	tickets = db.scalars(
 		select(models.SupportTicket)
-		.where(models.SupportTicket.master_id == settings.demo_master_id)
+		.where(models.SupportTicket.master_id == master.id)
 		.order_by(models.SupportTicket.last_message_at.desc())
 	).all()
 	result = []
@@ -423,15 +481,15 @@ async def list_support_tickets(
 async def create_support_ticket(
 	body: SupportTicketCreateRequest,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> SupportTicketSchema:
 	now = datetime.now(timezone.utc)
 	external_id = f"support-{int(now.timestamp())}"
-	master = db.get(models.Master, settings.demo_master_id)
 	ticket = models.SupportTicket(
 		external_id=external_id,
-		master_id=settings.demo_master_id,
+		master_id=master.id,
 		title=body.title.strip(),
-		author_name=master.first_name if master else "Анна",
+		author_name=master.first_name,
 		status="new",
 		last_message=body.description.strip(),
 		last_message_at=now,
@@ -464,10 +522,12 @@ async def create_support_ticket(
 
 
 @router.get("/support/tickets/{ticket_id}/messages", response_model=list[CommunityMessageSchema])
-async def list_support_messages(ticket_id: str, db: Session = Depends(get_db)) -> list[CommunityMessageSchema]:
-	ticket = db.scalar(select(models.SupportTicket).where(models.SupportTicket.external_id == ticket_id))
-	if ticket is None:
-		raise HTTPException(status_code=404, detail="Ticket not found")
+async def list_support_messages(
+	ticket_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[CommunityMessageSchema]:
+	ticket = _get_master_support_ticket(db, master.id, ticket_id)
 
 	messages = db.scalars(
 		select(models.SupportMessage)
@@ -514,10 +574,9 @@ async def send_support_message(
 	ticket_id: str,
 	body: SupportMessageCreateRequest,
 	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
 ) -> CommunityMessageSchema:
-	ticket = db.scalar(select(models.SupportTicket).where(models.SupportTicket.external_id == ticket_id))
-	if ticket is None:
-		raise HTTPException(status_code=404, detail="Ticket not found")
+	ticket = _get_master_support_ticket(db, master.id, ticket_id)
 	if ticket.status in {"closed", "cancelled"}:
 		raise HTTPException(status_code=400, detail="Ticket is closed")
 
@@ -525,7 +584,7 @@ async def send_support_message(
 	message = models.SupportMessage(
 		external_id=f"s-{int(now.timestamp())}",
 		ticket_id=ticket.id,
-		author_name=ticket.author_name,
+		author_name=master.first_name,
 		text=body.text.strip(),
 		sent_at=now,
 		is_mine=True,
@@ -547,10 +606,12 @@ async def send_support_message(
 
 
 @router.post("/support/tickets/{ticket_id}/cancel", response_model=SupportTicketSchema)
-async def cancel_support_ticket(ticket_id: str, db: Session = Depends(get_db)) -> SupportTicketSchema:
-	ticket = db.scalar(select(models.SupportTicket).where(models.SupportTicket.external_id == ticket_id))
-	if ticket is None:
-		raise HTTPException(status_code=404, detail="Ticket not found")
+async def cancel_support_ticket(
+	ticket_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> SupportTicketSchema:
+	ticket = _get_master_support_ticket(db, master.id, ticket_id)
 
 	ticket.status = "cancelled"
 	db.commit()

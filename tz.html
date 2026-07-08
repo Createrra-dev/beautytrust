@@ -313,7 +313,7 @@
 						<tr><td>Услуги мастера</td><td><span class="badge badge-partial">~</span></td><td>API есть, фронт — локальный список</td></tr>
 						<tr><td>Статистика Home</td><td><span class="badge badge-partial">~</span></td><td>Захардкожена на бэке и фронте</td></tr>
 						<tr><td>Платежи T-Bank</td><td><span class="badge badge-partial">~</span></td><td>Init/Status, не связаны с тарифами</td></tr>
-						<tr><td>Авторизация</td><td><span class="badge badge-partial">~</span></td><td>OTP + JWT; middleware не на всех /api/*</td></tr>
+						<tr><td>Авторизация</td><td><span class="badge badge-done">✓</span></td><td>OTP + JWT на всех /api/* (кроме health/auth)</td></tr>
 						<tr><td>Регистрация</td><td><span class="badge badge-done">✓</span></td><td>Имя, телефон, email, пароль → Master в Postgres</td></tr>
 						<tr><td>OTP Telegram / Flash Call</td><td><span class="badge badge-done">✓</span></td><td>@BeautyTrust_bot + Zvonok</td></tr>
 						<tr><td>PIN / Face ID</td><td><span class="badge badge-done">✓</span></td><td>Локально на устройстве</td></tr>
@@ -340,8 +340,8 @@
 					<label class="task"><input type="checkbox" data-id="0-1-2d" checked><span class="task-text">Flash Call: статус звонка <code>GET /api/auth/otp/call-status</code><span class="task-note">Zvonok; без ложного «Закончен удачно»</span></span></label>
 					<label class="task"><input type="checkbox" data-id="0-1-2e" checked><span class="task-text">Фронт: OtpMethodScreen + PIN + Face ID + logout<span class="task-note">Выбор Telegram/звонок; локальный PIN</span></span></label>
 					<label class="task"><input type="checkbox" data-id="0-1-3" checked><span class="task-text">JWT access после OTP<span class="task-note">Access token есть; refresh/logout API — ещё нет</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-4"><span class="task-text">Middleware авторизации на все <code>/api/*</code><span class="task-note">Пока только /api/profile; остальные demo_master_id</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-5"><span class="task-text">Привязка данных к <code>master_id</code> из токена<span class="task-note">Убрать demo_master_id из appointments/support/…</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-4" checked><span class="task-text">Middleware авторизации на все <code>/api/*</code><span class="task-note">Кроме /api/health и /api/auth/*; payments init/status тоже под JWT</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-5" checked><span class="task-text">Привязка данных к <code>master_id</code> из токена<span class="task-note">appointments, support; community author = имя мастера</span></span></label>
 					<label class="task"><input type="checkbox" data-id="0-1-6" checked><span class="task-text">Фронт: <code>Authorization: Bearer</code> в BeautyTrustApi<span class="task-note">AuthSession + SharedPreferences</span></span></label>
 				</div>
 				<div class="task-group">
@@ -536,7 +536,7 @@
 				<div class="task-group">
 					<h4>Sprint 1 — ближайшие 2 недели</h4>
 					<label class="task"><input type="checkbox" data-id="s1-1" checked><span class="task-text">Auth (OTP Telegram/Flash Call + JWT + регистрация)</span></label>
-					<label class="task"><input type="checkbox" data-id="s1-2"><span class="task-text">Привязка эндпоинтов к master_id</span></label>
+					<label class="task"><input type="checkbox" data-id="s1-2" checked><span class="task-text">Привязка эндпоинтов к master_id</span></label>
 					<label class="task"><input type="checkbox" data-id="s1-3"><span class="task-text">Реальная статистика дашборда</span></label>
 					<label class="task"><input type="checkbox" data-id="s1-4"><span class="task-text">История проверок</span></label>
 					<label class="task"><input type="checkbox" data-id="s1-5"><span class="task-text">DELETE /api/appointments/{id}</span></label>
@@ -566,7 +566,7 @@
 	<script>
 		const STORAGE_KEY = 'beautytrust-tz-progress';
 		const STORAGE_VERSION_KEY = 'beautytrust-tz-progress-version';
-		const PROGRESS_VERSION = 3;
+		const PROGRESS_VERSION = 4;
 
 		function loadProgress() {
 			try {

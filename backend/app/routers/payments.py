@@ -1,10 +1,12 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from app.config import settings
+from app.db import models
+from app.deps.auth import get_current_master
 from app.services.payment_service import PaymentService
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
@@ -66,7 +68,11 @@ async def health() -> dict[str, bool | str]:
 
 
 @router.post("/init", response_model=InitPaymentResponse)
-async def init_payment(body: InitPaymentRequest | None = None) -> InitPaymentResponse:
+async def init_payment(
+	body: InitPaymentRequest | None = None,
+	master: models.Master = Depends(get_current_master),
+) -> InitPaymentResponse:
+	_ = master
 	if not settings.tbank_configured:
 		raise HTTPException(
 			status_code=500,
@@ -138,7 +144,11 @@ async def init_payment(body: InitPaymentRequest | None = None) -> InitPaymentRes
 
 
 @router.get("/{payment_id}/status", response_model=PaymentStatusResponse)
-async def payment_status(payment_id: str) -> PaymentStatusResponse:
+async def payment_status(
+	payment_id: str,
+	master: models.Master = Depends(get_current_master),
+) -> PaymentStatusResponse:
+	_ = master
 	if not settings.tbank_configured:
 		raise HTTPException(status_code=500, detail="T-Bank credentials are not configured.")
 

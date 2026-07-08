@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
+import 'auth_session.dart';
 
 class PaymentInitResult {
 	const PaymentInitResult({
@@ -70,6 +71,20 @@ class PaymentApi {
 
 	Uri get _baseUri => Uri.parse(AppConfig.apiBaseUrl);
 
+	Map<String, String> _headers({bool jsonBody = false}) {
+		final headers = <String, String>{};
+		if (jsonBody) {
+			headers['Content-Type'] = 'application/json';
+		}
+
+		final token = AuthSession.accessToken;
+		if (token != null && token.isNotEmpty) {
+			headers['Authorization'] = 'Bearer $token';
+		}
+
+		return headers;
+	}
+
 	Future<PaymentInitResult> initPayment({
 		int? amountKopecks,
 		String? description,
@@ -89,7 +104,7 @@ class PaymentApi {
 
 		final response = await _client.post(
 			_baseUri.replace(path: '/api/payments/init'),
-			headers: {'Content-Type': 'application/json'},
+			headers: _headers(jsonBody: true),
 			body: jsonEncode(body),
 		);
 
@@ -108,6 +123,7 @@ class PaymentApi {
 	Future<PaymentStatusResult> getPaymentStatus(String paymentId) async {
 		final response = await _client.get(
 			_baseUri.replace(path: '/api/payments/$paymentId/status'),
+			headers: _headers(),
 		);
 
 		if (response.statusCode >= 200 && response.statusCode < 300) {
