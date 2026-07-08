@@ -309,14 +309,16 @@
 						<tr><td>Проверка клиента</td><td><span class="badge badge-done">✓</span></td><td>POST /api/clients/check</td></tr>
 						<tr><td>Сообщество</td><td><span class="badge badge-done">✓</span></td><td>Темы и сообщения</td></tr>
 						<tr><td>Поддержка</td><td><span class="badge badge-done">✓</span></td><td>Тикеты, чат, отмена</td></tr>
-						<tr><td>Профиль мастера</td><td><span class="badge badge-partial">~</span></td><td>API есть, фронт не подключён</td></tr>
+						<tr><td>Профиль мастера</td><td><span class="badge badge-partial">~</span></td><td>GET /api/profile по JWT, фронт подключён; PATCH/аватар нет</td></tr>
 						<tr><td>Услуги мастера</td><td><span class="badge badge-partial">~</span></td><td>API есть, фронт — локальный список</td></tr>
 						<tr><td>Статистика Home</td><td><span class="badge badge-partial">~</span></td><td>Захардкожена на бэке и фронте</td></tr>
 						<tr><td>Платежи T-Bank</td><td><span class="badge badge-partial">~</span></td><td>Init/Status, не связаны с тарифами</td></tr>
-						<tr><td>Авторизация</td><td><span class="badge badge-p0">✗</span></td><td>demo_master_id, без токенов</td></tr>
+						<tr><td>Авторизация</td><td><span class="badge badge-partial">~</span></td><td>OTP + JWT; middleware не на всех /api/*</td></tr>
+						<tr><td>Регистрация</td><td><span class="badge badge-done">✓</span></td><td>Имя, телефон, email, пароль → Master в Postgres</td></tr>
+						<tr><td>OTP Telegram / Flash Call</td><td><span class="badge badge-done">✓</span></td><td>@BeautyTrust_bot + Zvonok</td></tr>
+						<tr><td>PIN / Face ID</td><td><span class="badge badge-done">✓</span></td><td>Локально на устройстве</td></tr>
 						<tr><td>История проверок</td><td><span class="badge badge-p0">✗</span></td><td>Модель есть, API нет</td></tr>
-						<tr><td>Аватар</td><td><span class="badge badge-p0">✗</span></td><td>Только раздача /uploads</td></tr>
-						<tr><td>Регистрация / OTP / PIN</td><td><span class="badge badge-p0">✗</span></td><td>Только на фронте</td></tr>
+						<tr><td>Аватар</td><td><span class="badge badge-p0">✗</span></td><td>Только локально на устройстве</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -331,22 +333,25 @@
 			<div class="phase-body">
 				<div class="task-group">
 					<h4>0.1 Аутентификация и мультитенантность <span class="badge badge-p0">P0</span></h4>
-					<label class="task"><input type="checkbox" data-id="0-1-1"><span class="task-text"><code>POST /api/auth/register</code><span class="task-note">Имя, телефон, email, пароль</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-2" checked><span class="task-text"><code>POST /api/auth/otp/send</code> + <code>POST /api/auth/otp/verify</code><span class="task-note">OTP через @BeautyTrust_bot</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-2b" checked><span class="task-text">Telegram webhook <code>/api/auth/telegram/webhook</code><span class="task-note">t.me/BeautyTrust_bot</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-3"><span class="task-text"><code>POST /api/auth/login</code> / <code>refresh</code> / <code>logout</code><span class="task-note">JWT access + refresh</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-4"><span class="task-text">Middleware авторизации на все <code>/api/*</code><span class="task-note">Кроме auth и health</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-5"><span class="task-text">Привязка данных к <code>master_id</code> из токена<span class="task-note">Убрать demo_master_id</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-1-6"><span class="task-text">Фронт: <code>Authorization: Bearer</code> в BeautyTrustApi<span class="task-note">Secure storage для сессии</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-1" checked><span class="task-text">Регистрация: имя, телефон, email, пароль → Master<span class="task-note">Через OTP-сессию; пароль bcrypt; миграция 0006</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2" checked><span class="task-text"><code>POST /api/auth/otp/send</code> + <code>POST /api/auth/otp/verify</code><span class="task-note">Telegram + Flash Call (Zvonok); TTL 5 мин</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2b" checked><span class="task-text">Telegram webhook <code>/api/auth/telegram/webhook</code><span class="task-note">@BeautyTrust_bot, phone↔chat link</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2c" checked><span class="task-text"><code>POST /api/auth/phone/check</code><span class="task-note">Вход только для зарегистрированных; регистрация — блок дубликата</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2d" checked><span class="task-text">Flash Call: статус звонка <code>GET /api/auth/otp/call-status</code><span class="task-note">Zvonok; без ложного «Закончен удачно»</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-2e" checked><span class="task-text">Фронт: OtpMethodScreen + PIN + Face ID + logout<span class="task-note">Выбор Telegram/звонок; локальный PIN</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-3" checked><span class="task-text">JWT access после OTP<span class="task-note">Access token есть; refresh/logout API — ещё нет</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-4"><span class="task-text">Middleware авторизации на все <code>/api/*</code><span class="task-note">Пока только /api/profile; остальные demo_master_id</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-5"><span class="task-text">Привязка данных к <code>master_id</code> из токена<span class="task-note">Убрать demo_master_id из appointments/support/…</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-1-6" checked><span class="task-text">Фронт: <code>Authorization: Bearer</code> в BeautyTrustApi<span class="task-note">AuthSession + SharedPreferences</span></span></label>
 				</div>
 				<div class="task-group">
 					<h4>0.2 Базовая инфраструктура <span class="badge badge-p0">P0</span></h4>
 					<label class="task"><input type="checkbox" data-id="0-2-1"><span class="task-text">Перенос платежей из SQLite в Postgres</span></label>
-					<label class="task"><input type="checkbox" data-id="0-2-2"><span class="task-text">Alembic-миграции для всех изменений схемы</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-2" checked><span class="task-text">Alembic-миграции для изменений схемы<span class="task-note">0001–0006 (auth, telegram, zvonok, registration fields)</span></span></label>
 					<label class="task"><input type="checkbox" data-id="0-2-3"><span class="task-text">Структурированные ошибки API (<code>code</code>, <code>message</code>, <code>details</code>)</span></label>
 					<label class="task"><input type="checkbox" data-id="0-2-4"><span class="task-text">Логирование запросов и ошибок</span></label>
 					<label class="task"><input type="checkbox" data-id="0-2-5"><span class="task-text">Rate limiting на auth и client check</span></label>
-					<label class="task"><input type="checkbox" data-id="0-2-6"><span class="task-text">Валидация: телефон, enum-ы, границы цен и дат</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-6" checked><span class="task-text">Валидация телефона / пароля / email при auth<span class="task-note">Частично: auth + registration; enum/цены ещё нет</span></span></label>
 				</div>
 			</div>
 		</section>
@@ -395,7 +400,7 @@
 			<div class="phase-body">
 				<div class="task-group">
 					<h4>2.1 Профиль <span class="badge badge-p1">P1</span></h4>
-					<label class="task"><input type="checkbox" data-id="2-1-1"><span class="task-text">Фронт: подключить <code>fetchProfile()</code> вместо MasterProfileService</span></label>
+					<label class="task"><input type="checkbox" data-id="2-1-1" checked><span class="task-text">Фронт: подключить <code>fetchProfile()</code> вместо MasterProfileService<span class="task-note">MasterProfileScreen тянет JWT-профиль; fallback на демо</span></span></label>
 					<label class="task"><input type="checkbox" data-id="2-1-2"><span class="task-text"><code>PATCH /api/profile</code> — имя, email</span></label>
 					<label class="task"><input type="checkbox" data-id="2-1-3"><span class="task-text">Статистика профиля из БД (clients_count, reviews_count, years)</span></label>
 				</div>
@@ -530,7 +535,7 @@
 			<div class="phase-body">
 				<div class="task-group">
 					<h4>Sprint 1 — ближайшие 2 недели</h4>
-					<label class="task"><input type="checkbox" data-id="s1-1"><span class="task-text">Auth (OTP + JWT)</span></label>
+					<label class="task"><input type="checkbox" data-id="s1-1" checked><span class="task-text">Auth (OTP Telegram/Flash Call + JWT + регистрация)</span></label>
 					<label class="task"><input type="checkbox" data-id="s1-2"><span class="task-text">Привязка эндпоинтов к master_id</span></label>
 					<label class="task"><input type="checkbox" data-id="s1-3"><span class="task-text">Реальная статистика дашборда</span></label>
 					<label class="task"><input type="checkbox" data-id="s1-4"><span class="task-text">История проверок</span></label>
@@ -538,7 +543,7 @@
 				</div>
 				<div class="task-group">
 					<h4>Sprint 2</h4>
-					<label class="task"><input type="checkbox" data-id="s2-1"><span class="task-text">Профиль + аватар</span></label>
+					<label class="task"><input type="checkbox" data-id="s2-1"><span class="task-text">Профиль (редактирование) + аватар на сервер<span class="task-note">Чтение профиля по JWT уже есть</span></span></label>
 					<label class="task"><input type="checkbox" data-id="s2-2"><span class="task-text">Услуги мастера (CRUD + фронт)</span></label>
 					<label class="task"><input type="checkbox" data-id="s2-3"><span class="task-text">Платежи → подписки</span></label>
 				</div>
@@ -553,16 +558,24 @@
 
 		<footer>
 			Beauty Trust · API: <a href="https://apis.beautytrust.ru" style="color: var(--secondary)">apis.beautytrust.ru</a> ·
-			Репозиторий: <a href="https://github.com/alexdev1cteam-art/beautytrust" style="color: var(--secondary)">github.com/alexdev1cteam-art/beautytrust</a><br>
-			Прогресс сохраняется в localStorage браузера (ключ <code>beautytrust-tz-progress</code>).
+			Репозиторий: <a href="https://github.com/Createrra-dev/beautytrust" style="color: var(--secondary)">github.com/Createrra-dev/beautytrust</a><br>
+			Прогресс: HTML-отметки = актуальный статус в репо; ваши правки сохраняются в localStorage (<code>beautytrust-tz-progress</code>).
 		</footer>
 	</div>
 
 	<script>
 		const STORAGE_KEY = 'beautytrust-tz-progress';
+		const STORAGE_VERSION_KEY = 'beautytrust-tz-progress-version';
+		const PROGRESS_VERSION = 3;
 
 		function loadProgress() {
 			try {
+				const storedVersion = Number(localStorage.getItem(STORAGE_VERSION_KEY) || '0');
+				if (storedVersion < PROGRESS_VERSION) {
+					localStorage.removeItem(STORAGE_KEY);
+					localStorage.setItem(STORAGE_VERSION_KEY, String(PROGRESS_VERSION));
+					return {};
+				}
 				return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
 			} catch {
 				return {};
@@ -571,6 +584,7 @@
 
 		function saveProgress(data) {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+			localStorage.setItem(STORAGE_VERSION_KEY, String(PROGRESS_VERSION));
 		}
 
 		function updateUI() {
@@ -580,7 +594,11 @@
 
 			checkboxes.forEach((cb) => {
 				const id = cb.dataset.id;
-				cb.checked = !!progress[id];
+				if (Object.prototype.hasOwnProperty.call(progress, id)) {
+					cb.checked = !!progress[id];
+				} else {
+					cb.checked = cb.defaultChecked;
+				}
 				cb.closest('.task').classList.toggle('done', cb.checked);
 				if (cb.checked) done++;
 			});
@@ -599,7 +617,8 @@
 				if (meta && phaseChecks.length) {
 					const original = meta.dataset.original || meta.textContent;
 					if (!meta.dataset.original) meta.dataset.original = original;
-					meta.textContent = phaseDone + '/' + phaseChecks.length + (original && !original.includes('/') ? ' · ' + original : '');
+					const suffix = original && !original.includes('/') ? ' · ' + original : '';
+					meta.textContent = phaseDone + '/' + phaseChecks.length + suffix;
 				}
 			});
 		}
@@ -629,8 +648,9 @@
 		});
 
 		document.getElementById('reset-progress').addEventListener('click', () => {
-			if (confirm('Сбросить все отметки прогресса?')) {
+			if (confirm('Сбросить личные правки прогресса и вернуть отметки из ТЗ?')) {
 				localStorage.removeItem(STORAGE_KEY);
+				localStorage.setItem(STORAGE_VERSION_KEY, String(PROGRESS_VERSION));
 				updateUI();
 			}
 		});
