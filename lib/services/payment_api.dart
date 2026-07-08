@@ -141,6 +141,10 @@ class PaymentApi {
 	String _extractErrorMessage(String body) {
 		try {
 			final decoded = jsonDecode(body) as Map<String, dynamic>;
+			final message = decoded['message'];
+			if (message is String && message.isNotEmpty) {
+				return message;
+			}
 			final detail = decoded['detail'];
 			if (detail is String) {
 				return detail;

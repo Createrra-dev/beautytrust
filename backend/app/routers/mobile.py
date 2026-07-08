@@ -8,6 +8,7 @@ from app.config import settings
 from app.db import models
 from app.db.session import get_db
 from app.deps.auth import get_current_master
+from app.deps.rate_limit import rate_limit_client_check
 from app.schemas.api import (
 	AppointmentCreateRequest,
 	AppointmentSchema,
@@ -279,7 +280,11 @@ async def save_visit_result(
 	return _appointment_schema(appointment)
 
 
-@router.post("/clients/check", response_model=ClientCheckResponse)
+@router.post(
+	"/clients/check",
+	response_model=ClientCheckResponse,
+	dependencies=[Depends(rate_limit_client_check)],
+)
 async def check_client(
 	body: PhoneCheckRequest,
 	db: Session = Depends(get_db),

@@ -14,6 +14,7 @@ from app.schemas.auth import (
 	PhoneCheckRequest,
 	PhoneCheckResponse,
 )
+from app.deps.rate_limit import rate_limit_auth
 from app.services.auth_service import (
 	build_otp_send_response,
 	create_access_token,
@@ -46,7 +47,7 @@ def _flash_call_status_display(status: str | None, dial_status_display: str | No
 	return "Ожидаем звонок..."
 
 
-@router.post("/phone/check", response_model=PhoneCheckResponse)
+@router.post("/phone/check", response_model=PhoneCheckResponse, dependencies=[Depends(rate_limit_auth)])
 async def check_phone(payload: PhoneCheckRequest, db: Session = Depends(get_db)) -> PhoneCheckResponse:
 	try:
 		phone_digits = normalize_phone_digits(payload.phone)
@@ -56,7 +57,7 @@ async def check_phone(payload: PhoneCheckRequest, db: Session = Depends(get_db))
 	return PhoneCheckResponse(registered=phone_is_registered(db, phone_digits))
 
 
-@router.post("/otp/send", response_model=OtpSendResponse)
+@router.post("/otp/send", response_model=OtpSendResponse, dependencies=[Depends(rate_limit_auth)])
 async def send_otp(payload: OtpSendRequest, db: Session = Depends(get_db)) -> OtpSendResponse:
 	try:
 		phone_digits = normalize_phone_digits(payload.phone)
@@ -113,7 +114,7 @@ async def send_otp(payload: OtpSendRequest, db: Session = Depends(get_db)) -> Ot
 	return OtpSendResponse(**response)
 
 
-@router.get("/otp/call-status", response_model=OtpCallStatusResponse)
+@router.get("/otp/call-status", response_model=OtpCallStatusResponse, dependencies=[Depends(rate_limit_auth)])
 async def get_otp_call_status(
 	session_id: str,
 	db: Session = Depends(get_db),
@@ -165,7 +166,7 @@ async def get_otp_call_status(
 	)
 
 
-@router.post("/otp/verify", response_model=AuthTokenResponse)
+@router.post("/otp/verify", response_model=AuthTokenResponse, dependencies=[Depends(rate_limit_auth)])
 async def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)) -> AuthTokenResponse:
 	session = db.scalar(
 		select(models.OtpSession).where(models.OtpSession.session_token == payload.session_id)

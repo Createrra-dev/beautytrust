@@ -346,11 +346,11 @@
 				</div>
 				<div class="task-group">
 					<h4>0.2 Базовая инфраструктура <span class="badge badge-p0">P0</span></h4>
-					<label class="task"><input type="checkbox" data-id="0-2-1"><span class="task-text">Перенос платежей из SQLite в Postgres</span></label>
-					<label class="task"><input type="checkbox" data-id="0-2-2" checked><span class="task-text">Alembic-миграции для изменений схемы<span class="task-note">0001–0006 (auth, telegram, zvonok, registration fields)</span></span></label>
-					<label class="task"><input type="checkbox" data-id="0-2-3"><span class="task-text">Структурированные ошибки API (<code>code</code>, <code>message</code>, <code>details</code>)</span></label>
-					<label class="task"><input type="checkbox" data-id="0-2-4"><span class="task-text">Логирование запросов и ошибок</span></label>
-					<label class="task"><input type="checkbox" data-id="0-2-5"><span class="task-text">Rate limiting на auth и client check</span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-1" checked><span class="task-text">Перенос платежей из SQLite в Postgres<span class="task-note">PaymentRepository → SQLAlchemy/Postgres; SQLite удалён</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-2" checked><span class="task-text">Alembic-миграции для изменений схемы<span class="task-note">0001–0007 (auth, telegram, zvonok, registration, payment indexes)</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-3" checked><span class="task-text">Структурированные ошибки API (<code>code</code>, <code>message</code>, <code>details</code>)<span class="task-note">Глобальные exception handlers</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-4" checked><span class="task-text">Логирование запросов и ошибок<span class="task-note">RequestLoggingMiddleware + X-Request-Id</span></span></label>
+					<label class="task"><input type="checkbox" data-id="0-2-5" checked><span class="task-text">Rate limiting на auth и client check<span class="task-note">20/min auth, 30/min clients/check</span></span></label>
 					<label class="task"><input type="checkbox" data-id="0-2-6" checked><span class="task-text">Валидация телефона / пароля / email при auth<span class="task-note">Частично: auth + registration; enum/цены ещё нет</span></span></label>
 				</div>
 			</div>
@@ -566,7 +566,7 @@
 	<script>
 		const STORAGE_KEY = 'beautytrust-tz-progress';
 		const STORAGE_VERSION_KEY = 'beautytrust-tz-progress-version';
-		const PROGRESS_VERSION = 4;
+		const PROGRESS_VERSION = 5;
 
 		function loadProgress() {
 			try {
