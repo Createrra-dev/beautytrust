@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/appointment_record.dart';
 import '../../models/master_profile.dart';
+import '../../services/api/app_api_repository.dart';
+import '../../services/api/beauty_trust_api.dart';
 import '../../services/auth_session.dart';
 import '../../services/master_avatar_service.dart';
 import '../../services/master_profile_service.dart';
@@ -23,12 +25,28 @@ class MasterProfileScreen extends StatefulWidget {
 
 class _MasterProfileScreenState extends State<MasterProfileScreen> {
 	final _avatarService = MasterAvatarService.instance;
+	final _apiRepository = AppApiRepository();
+	late Future<MasterProfile> _profileFuture;
 
 	@override
 	void initState() {
 		super.initState();
 		_avatarService.addListener(_onAvatarChanged);
 		_avatarService.load();
+		_profileFuture = _loadProfile();
+	}
+
+	Future<MasterProfile> _loadProfile() async {
+		await AuthSession.load();
+		if (AuthSession.isAuthenticated) {
+			try {
+				return await _apiRepository.fetchProfile();
+			} on ApiException {
+				return MasterProfileService.currentMaster;
+			}
+		}
+
+		return MasterProfileService.currentMaster;
 	}
 
 	@override
@@ -65,31 +83,51 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 
 	@override
 	Widget build(BuildContext context) {
-		final profile = MasterProfileService.currentMaster;
-
 		return SafeArea(
-			child: SingleChildScrollView(
-				padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-				child: Column(
-					crossAxisAlignment: CrossAxisAlignment.stretch,
-					children: [
-						const _ProfileHeader(),
-						const SizedBox(height: 24),
-						_ProfileHero(
-							profile: profile,
-							avatarPath: _avatarService.avatarPath,
-							isAvatarLoading: _avatarService.isLoading,
-							onAvatarTap: _pickAvatar,
+			child: FutureBuilder<MasterProfile>(
+				future: _profileFuture,
+				builder: (context, snapshot) {
+					if (snapshot.connectionState != ConnectionState.done) {
+						return const Center(child: CircularProgressIndicator());
+					}
+
+					final profile = snapshot.data ?? MasterProfileService.currentMaster;
+
+					return SingleChildScrollView(
+						padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.stretch,
+							children: [
+								const _ProfileHeader(),
+								const SizedBox(height: 24),
+								_ProfileHero(
+									profile: profile,
+									avatarPath: _avatarService.avatarPath,
+									isAvatarLoading: _avatarService.isLoading,
+									onAvatarTap: _pickAvatar,
+								),
+								if (profile.email != null && profile.email!.isNotEmpty) ...[
+									const SizedBox(height: 12),
+									Text(
+										profile.email!,
+										textAlign: TextAlign.center,
+										style: const TextStyle(
+											fontSize: 14,
+											color: AppColors.textMuted,
+										),
+									),
+								],
+								const SizedBox(height: 24),
+								_ProfileStatsRow(profile: profile),
+								const SizedBox(height: 20),
+								_ProfileMenuCard(
+									onItemTap: (item) => _onMenuTap(context, item),
+									tariffLabel: profile.tariffLabel,
+								),
+							],
 						),
-						const SizedBox(height: 24),
-						_ProfileStatsRow(profile: profile),
-						const SizedBox(height: 20),
-						_ProfileMenuCard(
-							onItemTap: (item) => _onMenuTap(context, item),
-							tariffLabel: profile.tariffLabel,
-						),
-					],
-				),
+					);
+				},
 			),
 		);
 	}

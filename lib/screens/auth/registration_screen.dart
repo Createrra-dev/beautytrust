@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/registration_draft.dart';
 import '../../services/api/auth_api.dart';
 import '../../services/api/beauty_trust_api.dart';
 import '../../theme/app_theme.dart';
@@ -80,7 +81,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 		}
 
 		final phoneDigits = extractPhoneDigits(_phoneController.text);
-		final firstName = _firstNameController.text.trim();
+		final registrationDraft = RegistrationDraft(
+			firstName: _firstNameController.text.trim(),
+			password: _passwordController.text,
+			email: _emailController.text.trim(),
+		);
 
 		setState(() => _isSubmitting = true);
 
@@ -102,8 +107,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 				MaterialPageRoute(
 					builder: (context) => OtpMethodScreen(
 						phoneDigits: phoneDigits,
-						firstName: firstName,
 						isRegistration: true,
+						registrationDraft: registrationDraft,
 					),
 				),
 			);

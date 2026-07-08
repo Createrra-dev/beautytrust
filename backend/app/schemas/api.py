@@ -103,6 +103,8 @@ class MasterProfileSchema(BaseModel):
 	protected_income: int
 	tariff_label: str
 	avatar_url: str | None = None
+	email: str | None = None
+	phone_digits: str | None = None
 
 
 class CommunityTopicSchema(BaseModel):

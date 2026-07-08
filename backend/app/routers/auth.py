@@ -21,6 +21,7 @@ from app.services.auth_service import (
 	deliver_otp_session,
 	normalize_phone_digits,
 	phone_is_registered,
+	prepare_registration_data,
 	verify_otp_code,
 	verify_otp_code_by_phone,
 )
@@ -81,8 +82,29 @@ async def send_otp(payload: OtpSendRequest, db: Session = Depends(get_db)) -> Ot
 			detail="Вы не зарегистрированы. Пройдите регистрацию.",
 		)
 
+	registration_first_name = None
+	registration_email = None
+	registration_password_hash = None
+	if payload.is_registration:
+		try:
+			registration_first_name, registration_email, registration_password_hash = prepare_registration_data(
+				db,
+				payload.first_name,
+				payload.email,
+				payload.password,
+			)
+		except ValueError as error:
+			raise HTTPException(status_code=400, detail=str(error)) from error
+
 	try:
-		session, otp_code = create_otp_session(db, phone_digits, delivery_channel=payload.channel)
+		session, otp_code = create_otp_session(
+			db,
+			phone_digits,
+			delivery_channel=payload.channel,
+			registration_first_name=registration_first_name,
+			registration_email=registration_email,
+			registration_password_hash=registration_password_hash,
+		)
 		code_sent = await deliver_otp_session(db, session, otp_code)
 	except ZvonokError as error:
 		raise HTTPException(status_code=503, detail=str(error)) from error
@@ -162,6 +184,8 @@ async def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)) -
 			payload.session_id,
 			payload.code,
 			first_name=payload.first_name,
+			email=payload.email,
+			password=payload.password,
 		)
 	except ValueError as error:
 		if payload.phone:
@@ -172,6 +196,8 @@ async def verify_otp(payload: OtpVerifyRequest, db: Session = Depends(get_db)) -
 					phone_digits,
 					payload.code,
 					first_name=payload.first_name,
+					email=payload.email,
+					password=payload.password,
 				)
 			except ValueError as phone_error:
 				raise HTTPException(status_code=400, detail=str(phone_error)) from phone_error

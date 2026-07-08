@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/otp_delivery_channel.dart';
+import '../../models/registration_draft.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
 import '../../widgets/auth/auth_scaffold.dart';
@@ -10,12 +11,12 @@ class OtpMethodScreen extends StatelessWidget {
 	const OtpMethodScreen({
 		super.key,
 		required this.phoneDigits,
-		this.firstName,
+		this.registrationDraft,
 		this.isRegistration = false,
 	});
 
 	final String phoneDigits;
-	final String? firstName;
+	final RegistrationDraft? registrationDraft;
 	final bool isRegistration;
 
 	void _openOtpScreen(BuildContext context, OtpDeliveryChannel channel) {
@@ -23,7 +24,7 @@ class OtpMethodScreen extends StatelessWidget {
 			MaterialPageRoute(
 				builder: (context) => OtpCodeScreen(
 					phoneDigits: phoneDigits,
-					firstName: firstName,
+					registrationDraft: registrationDraft,
 					isRegistration: isRegistration,
 					initialChannel: channel,
 				),

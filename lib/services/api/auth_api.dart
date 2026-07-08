@@ -1,4 +1,5 @@
 import '../../models/otp_delivery_channel.dart';
+import '../../models/registration_draft.dart';
 import 'beauty_trust_api.dart';
 
 class OtpSendResult {
@@ -91,6 +92,7 @@ class AuthApi {
 		String phoneDigits, {
 		OtpDeliveryChannel channel = OtpDeliveryChannel.telegram,
 		bool isRegistration = false,
+		RegistrationDraft? registrationDraft,
 	}) async {
 		final json = await _api.postJson(
 			'/api/auth/otp/send',
@@ -98,6 +100,12 @@ class AuthApi {
 				'phone': '+7$phoneDigits',
 				'channel': channel.apiValue,
 				'is_registration': isRegistration,
+				if (isRegistration && registrationDraft != null) ...{
+					'first_name': registrationDraft.firstName,
+					'password': registrationDraft.password,
+					if (registrationDraft.normalizedEmail != null)
+						'email': registrationDraft.normalizedEmail,
+				},
 			},
 		);
 		return OtpSendResult.fromJson(json);
@@ -107,7 +115,7 @@ class AuthApi {
 		required String sessionId,
 		required String code,
 		String? phoneDigits,
-		String? firstName,
+		RegistrationDraft? registrationDraft,
 	}) async {
 		final json = await _api.postJson(
 			'/api/auth/otp/verify',
@@ -115,7 +123,12 @@ class AuthApi {
 				'session_id': sessionId,
 				'code': code,
 				if (phoneDigits != null) 'phone': '+7$phoneDigits',
-				if (firstName != null && firstName.isNotEmpty) 'first_name': firstName,
+				if (registrationDraft != null) ...{
+					'first_name': registrationDraft.firstName,
+					'password': registrationDraft.password,
+					if (registrationDraft.normalizedEmail != null)
+						'email': registrationDraft.normalizedEmail,
+				},
 			},
 		);
 		return AuthTokenResult.fromJson(json);

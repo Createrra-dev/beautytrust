@@ -8,6 +8,8 @@ class MasterProfile {
 		required this.preventedNoShows,
 		required this.protectedIncome,
 		required this.tariffLabel,
+		this.email,
+		this.phoneDigits,
 	});
 
 	final String firstName;
@@ -18,6 +20,8 @@ class MasterProfile {
 	final int preventedNoShows;
 	final int protectedIncome;
 	final String tariffLabel;
+	final String? email;
+	final String? phoneDigits;
 }
 
 enum MasterProfileMenuItem {

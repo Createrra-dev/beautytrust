@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../config/app_config.dart';
+import '../auth_session.dart';
 
 class ApiException implements Exception {
 	ApiException(this.message, {this.statusCode});
@@ -26,13 +27,27 @@ class BeautyTrustApi {
 		);
 	}
 
+	Map<String, String> _headers({bool jsonBody = false}) {
+		final headers = <String, String>{};
+		if (jsonBody) {
+			headers['Content-Type'] = 'application/json';
+		}
+
+		final token = AuthSession.accessToken;
+		if (token != null && token.isNotEmpty) {
+			headers['Authorization'] = 'Bearer $token';
+		}
+
+		return headers;
+	}
+
 	Future<Map<String, dynamic>> getJson(String path, {Map<String, String>? query}) async {
-		final response = await _client.get(_uri(path, query));
+		final response = await _client.get(_uri(path, query), headers: _headers());
 		return _decodeMap(response);
 	}
 
 	Future<List<dynamic>> getJsonList(String path, {Map<String, String>? query}) async {
-		final response = await _client.get(_uri(path, query));
+		final response = await _client.get(_uri(path, query), headers: _headers());
 		return _decodeList(response);
 	}
 
@@ -42,7 +57,7 @@ class BeautyTrustApi {
 	}) async {
 		final response = await _client.post(
 			_uri(path),
-			headers: {'Content-Type': 'application/json'},
+			headers: _headers(jsonBody: true),
 			body: jsonEncode(body ?? {}),
 		);
 		return _decodeMap(response);
@@ -54,7 +69,7 @@ class BeautyTrustApi {
 	}) async {
 		final response = await _client.patch(
 			_uri(path),
-			headers: {'Content-Type': 'application/json'},
+			headers: _headers(jsonBody: true),
 			body: jsonEncode(body ?? {}),
 		);
 		return _decodeMap(response);

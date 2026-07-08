@@ -20,6 +20,8 @@ class Master(Base):
 	tariff_label: Mapped[str] = mapped_column(String(120), nullable=False, default="Мастер")
 	avatar_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
 	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)
+	email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
+	password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 	telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True, index=True)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -171,6 +173,9 @@ class OtpSession(Base):
 	otp_code: Mapped[str] = mapped_column(String(8), nullable=False)
 	delivery_channel: Mapped[str] = mapped_column(String(20), nullable=False, default="telegram")
 	zvonok_call_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+	registration_first_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+	registration_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+	registration_password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 	telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
 	delivered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.config import settings
 from app.db import models
 from app.db.session import get_db
+from app.deps.auth import get_current_master
 from app.schemas.api import (
 	AppointmentCreateRequest,
 	AppointmentSchema,
@@ -90,11 +91,7 @@ async def api_health() -> dict[str, str]:
 
 
 @router.get("/profile", response_model=MasterProfileSchema)
-async def get_profile(db: Session = Depends(get_db)) -> MasterProfileSchema:
-	master = db.get(models.Master, settings.demo_master_id)
-	if master is None:
-		raise HTTPException(status_code=404, detail="Profile not found")
-
+async def get_profile(master: models.Master = Depends(get_current_master)) -> MasterProfileSchema:
 	avatar_url = None
 	if master.avatar_path:
 		avatar_url = f"{settings.public_base_url.rstrip('/')}/uploads/{master.avatar_path}"
@@ -109,6 +106,8 @@ async def get_profile(db: Session = Depends(get_db)) -> MasterProfileSchema:
 		protected_income=master.protected_income,
 		tariff_label=master.tariff_label,
 		avatar_url=avatar_url,
+		email=master.email,
+		phone_digits=master.phone_digits,
 	)
 
 

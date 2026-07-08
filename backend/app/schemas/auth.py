@@ -7,6 +7,9 @@ class OtpSendRequest(BaseModel):
 	phone: str = Field(min_length=10, max_length=20)
 	channel: Literal["telegram", "flash_call"] = "telegram"
 	is_registration: bool = False
+	first_name: str | None = Field(default=None, min_length=1, max_length=120)
+	email: str | None = Field(default=None, max_length=255)
+	password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class OtpSendResponse(BaseModel):
@@ -23,6 +26,8 @@ class OtpVerifyRequest(BaseModel):
 	code: str = Field(min_length=4, max_length=8)
 	phone: str | None = Field(default=None, min_length=10, max_length=20)
 	first_name: str | None = Field(default=None, min_length=1, max_length=120)
+	email: str | None = Field(default=None, max_length=255)
+	password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class PhoneCheckRequest(BaseModel):

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import models
+from app.services.password_service import hash_password, normalize_email, validate_password
 from app.services.telegram_bot import TelegramBotError, send_message
 from app.services.telegram_link import get_chat_id_for_phone, save_phone_telegram_link
 from app.services.zvonok_service import (
@@ -50,6 +51,9 @@ def create_otp_session(
 	db: Session,
 	phone_digits: str,
 	delivery_channel: str = OTP_CHANNEL_TELEGRAM,
+	registration_first_name: str | None = None,
+	registration_email: str | None = None,
+	registration_password_hash: str | None = None,
 ) -> tuple[models.OtpSession, str]:
 	if delivery_channel not in VALID_OTP_CHANNELS:
 		raise ValueError("Unsupported OTP delivery channel")
@@ -76,6 +80,9 @@ def create_otp_session(
 		otp_code=otp_code,
 		delivery_channel=delivery_channel,
 		expires_at=expires_at,
+		registration_first_name=registration_first_name,
+		registration_email=registration_email,
+		registration_password_hash=registration_password_hash,
 	)
 	db.add(session)
 	db.commit()
@@ -153,6 +160,8 @@ def verify_otp_code(
 	session_token: str,
 	code: str,
 	first_name: str | None = None,
+	email: str | None = None,
+	password: str | None = None,
 ) -> models.Master:
 	session = _resolve_session_for_verify(db, session_token, code)
 	if session is None:
@@ -177,7 +186,20 @@ def verify_otp_code(
 		select(models.Master).where(models.Master.phone_digits == session.phone_digits)
 	)
 	if master is None:
-		display_name = first_name.strip() if first_name and first_name.strip() else "Мастер"
+		display_name = first_name.strip() if first_name and first_name.strip() else session.registration_first_name
+		if not display_name:
+			display_name = "Мастер"
+
+		master_email = normalize_email(email) if email else session.registration_email
+		if master_email and email_is_registered(db, master_email):
+			raise ValueError("Этот email уже используется")
+
+		if password:
+			validate_password(password)
+			password_hash = hash_password(password)
+		else:
+			password_hash = session.registration_password_hash
+
 		master = models.Master(
 			first_name=display_name,
 			badge_label="Новый мастер",
@@ -188,6 +210,8 @@ def verify_otp_code(
 			protected_income=0,
 			tariff_label="Мастер",
 			phone_digits=session.phone_digits,
+			email=master_email,
+			password_hash=password_hash,
 		)
 		db.add(master)
 		db.flush()
@@ -209,11 +233,20 @@ def verify_otp_code_by_phone(
 	phone_digits: str,
 	code: str,
 	first_name: str | None = None,
+	email: str | None = None,
+	password: str | None = None,
 ) -> models.Master:
 	session = _find_active_session_by_code(db, phone_digits, code.strip())
 	if session is None:
 		raise ValueError("Код истёк или неверный. Запросите новый в приложении.")
-	return verify_otp_code(db, session.session_token, code, first_name=first_name)
+	return verify_otp_code(
+		db,
+		session.session_token,
+		code,
+		first_name=first_name,
+		email=email,
+		password=password,
+	)
 
 
 def phone_is_registered(db: Session, phone_digits: str) -> bool:
@@ -221,6 +254,33 @@ def phone_is_registered(db: Session, phone_digits: str) -> bool:
 		select(models.Master).where(models.Master.phone_digits == phone_digits)
 	)
 	return master is not None
+
+
+def email_is_registered(db: Session, email: str) -> bool:
+	master = db.scalar(
+		select(models.Master).where(models.Master.email == email)
+	)
+	return master is not None
+
+
+def prepare_registration_data(
+	db: Session,
+	first_name: str | None,
+	email: str | None,
+	password: str | None,
+) -> tuple[str, str | None, str]:
+	if not first_name or not first_name.strip():
+		raise ValueError("Укажите имя для регистрации")
+	if not password:
+		raise ValueError("Укажите пароль для регистрации")
+
+	display_name = first_name.strip()
+	normalized_email = normalize_email(email)
+	if normalized_email and email_is_registered(db, normalized_email):
+		raise ValueError("Этот email уже используется")
+
+	password_hash = hash_password(password)
+	return display_name, normalized_email, password_hash
 
 
 def _resolve_session_for_verify(

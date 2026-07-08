@@ -153,6 +153,8 @@ class AppApiRepository {
 			preventedNoShows: json['prevented_no_shows'] as int,
 			protectedIncome: json['protected_income'] as int,
 			tariffLabel: json['tariff_label'] as String,
+			email: json['email'] as String?,
+			phoneDigits: json['phone_digits'] as String?,
 		);
 	}
 

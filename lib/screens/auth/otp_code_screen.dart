@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/otp_delivery_channel.dart';
+import '../../models/registration_draft.dart';
 import '../../services/api/auth_api.dart';
 import '../../services/api/beauty_trust_api.dart';
 import '../../services/auth_session.dart';
@@ -22,13 +23,13 @@ class OtpCodeScreen extends StatefulWidget {
 	const OtpCodeScreen({
 		super.key,
 		required this.phoneDigits,
-		this.firstName,
+		this.registrationDraft,
 		this.isRegistration = false,
 		this.initialChannel = OtpDeliveryChannel.telegram,
 	});
 
 	final String phoneDigits;
-	final String? firstName;
+	final RegistrationDraft? registrationDraft;
 	final bool isRegistration;
 	final OtpDeliveryChannel initialChannel;
 
@@ -96,6 +97,7 @@ class _OtpCodeScreenState extends State<OtpCodeScreen> {
 				widget.phoneDigits,
 				channel: _channel,
 				isRegistration: widget.isRegistration,
+				registrationDraft: widget.registrationDraft,
 			);
 			if (!mounted) {
 				return;
@@ -251,7 +253,7 @@ class _OtpCodeScreenState extends State<OtpCodeScreen> {
 				sessionId: sessionId,
 				code: _digits.join(),
 				phoneDigits: widget.phoneDigits,
-				firstName: widget.isRegistration ? widget.firstName : null,
+				registrationDraft: widget.registrationDraft,
 			);
 
 			if (result.isNewUser || widget.isRegistration) {
