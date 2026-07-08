@@ -1,4 +1,5 @@
 import '../../models/appointment_record.dart';
+import '../../models/app_notification.dart';
 import '../../models/check_history_record.dart';
 import '../../models/client_check_result.dart';
 import '../../models/client_profile.dart';
@@ -214,8 +215,19 @@ class AppApiRepository {
 		);
 	}
 
-	Future<List<CommunityTopic>> fetchCommunityTopics({String query = ''}) async {
-		final items = await _api.getJsonList('/api/community/topics', query: {'q': query});
+	Future<List<CommunityTopic>> fetchCommunityTopics({
+		String query = '',
+		int limit = 50,
+		int offset = 0,
+	}) async {
+		final items = await _api.getJsonList(
+			'/api/community/topics',
+			query: {
+				'q': query,
+				'limit': '$limit',
+				'offset': '$offset',
+			},
+		);
 		return items.map((item) => _communityTopicFromJson(item as Map<String, dynamic>)).toList();
 	}
 
@@ -230,8 +242,28 @@ class AppApiRepository {
 		return _communityTopicFromJson(json);
 	}
 
-	Future<List<CommunityMessage>> fetchCommunityMessages(String topicId) async {
-		final items = await _api.getJsonList('/api/community/topics/$topicId/messages');
+	Future<CommunityTopic> markCommunityTopicRead(String topicId) async {
+		final json = await _api.patchJson('/api/community/topics/$topicId/read');
+		return _communityTopicFromJson(json);
+	}
+
+	Future<CommunityTopic> closeCommunityTopic(String topicId) async {
+		final json = await _api.postJson('/api/community/topics/$topicId/close');
+		return _communityTopicFromJson(json);
+	}
+
+	Future<List<CommunityMessage>> fetchCommunityMessages(
+		String topicId, {
+		int limit = 100,
+		int offset = 0,
+	}) async {
+		final items = await _api.getJsonList(
+			'/api/community/topics/$topicId/messages',
+			query: {
+				'limit': '$limit',
+				'offset': '$offset',
+			},
+		);
 		return items.map((item) => _communityMessageFromJson(item as Map<String, dynamic>)).toList();
 	}
 
@@ -246,8 +278,19 @@ class AppApiRepository {
 		return _communityMessageFromJson(json);
 	}
 
-	Future<List<SupportTicket>> fetchSupportTickets({String query = ''}) async {
-		final items = await _api.getJsonList('/api/support/tickets', query: {'q': query});
+	Future<List<SupportTicket>> fetchSupportTickets({
+		String query = '',
+		int limit = 50,
+		int offset = 0,
+	}) async {
+		final items = await _api.getJsonList(
+			'/api/support/tickets',
+			query: {
+				'q': query,
+				'limit': '$limit',
+				'offset': '$offset',
+			},
+		);
 		return items.map((item) => _supportTicketFromJson(item as Map<String, dynamic>)).toList();
 	}
 
@@ -262,8 +305,18 @@ class AppApiRepository {
 		return _supportTicketFromJson(json);
 	}
 
-	Future<List<CommunityMessage>> fetchSupportMessages(String ticketId) async {
-		final items = await _api.getJsonList('/api/support/tickets/$ticketId/messages');
+	Future<List<CommunityMessage>> fetchSupportMessages(
+		String ticketId, {
+		int limit = 100,
+		int offset = 0,
+	}) async {
+		final items = await _api.getJsonList(
+			'/api/support/tickets/$ticketId/messages',
+			query: {
+				'limit': '$limit',
+				'offset': '$offset',
+			},
+		);
 		return items.map((item) => _communityMessageFromJson(item as Map<String, dynamic>)).toList();
 	}
 
@@ -278,8 +331,56 @@ class AppApiRepository {
 		return _communityMessageFromJson(json);
 	}
 
+	Future<CommunityMessage> uploadSupportAttachment({
+		required String ticketId,
+		required String filePath,
+		String? filename,
+	}) async {
+		final json = await _api.multipartPost(
+			'/api/support/tickets/$ticketId/attachments',
+			fieldName: 'file',
+			filePath: filePath,
+			filename: filename,
+		);
+		return _communityMessageFromJson(json);
+	}
+
 	Future<void> cancelSupportTicket(String ticketId) async {
 		await _api.postJson('/api/support/tickets/$ticketId/cancel');
+	}
+
+	Future<void> registerDevice({
+		required String token,
+		String platform = 'ios',
+	}) async {
+		await _api.postJson(
+			'/api/devices/register',
+			body: {
+				'token': token,
+				'platform': platform,
+			},
+		);
+	}
+
+	Future<List<AppNotification>> fetchNotifications({
+		int limit = 50,
+		int offset = 0,
+	}) async {
+		final items = await _api.getJsonList(
+			'/api/notifications',
+			query: {
+				'limit': '$limit',
+				'offset': '$offset',
+			},
+		);
+		return items
+			.map((item) => AppNotification.fromJson(item as Map<String, dynamic>))
+			.toList();
+	}
+
+	Future<AppNotification> markNotificationRead(int notificationId) async {
+		final json = await _api.patchJson('/api/notifications/$notificationId/read');
+		return AppNotification.fromJson(json);
 	}
 
 	Future<List<TariffPlan>> fetchTariffs({String? audience}) async {
@@ -466,6 +567,7 @@ class AppApiRepository {
 			participantInitials: (json['participant_initials'] as List<dynamic>).cast<String>(),
 			unreadCount: json['unread_count'] as int? ?? 0,
 			isPinned: json['is_pinned'] as bool? ?? false,
+			isClosed: json['is_closed'] as bool? ?? false,
 			emoji: json['emoji'] as String? ?? '💬',
 		);
 	}
@@ -478,6 +580,8 @@ class AppApiRepository {
 			text: json['text'] as String,
 			sentAt: DateTime.parse(json['sent_at'] as String).toLocal(),
 			isMine: json['is_mine'] as bool,
+			attachmentUrl: json['attachment_url'] as String?,
+			attachmentName: json['attachment_name'] as String?,
 		);
 	}
 

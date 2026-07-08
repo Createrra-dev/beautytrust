@@ -23,18 +23,21 @@ from app.schemas.api import (
 	CommunityTopicSchema,
 	DashboardPeriodSchema,
 	DashboardStatsSchema,
+	DeviceRegisterRequest,
 	MasterProfileSchema,
 	MasterProfileUpdateRequest,
 	MasterReviewSchema,
 	MasterServiceCreateRequest,
 	MasterServiceSchema,
 	MasterServiceUpdateRequest,
+	NotificationSchema,
 	PhoneCheckRequest,
 	SupportMessageCreateRequest,
 	SupportTicketCreateRequest,
 	SupportTicketSchema,
 	VisitResultSchema,
 )
+from app.services.notification_service import notify_support_reply
 from app.services.password_service import normalize_email
 from app.services.uploads import avatar_url_for, uploads_root
 
@@ -889,15 +892,21 @@ async def list_check_history(
 @router.get("/community/topics", response_model=list[CommunityTopicSchema])
 async def list_topics(
 	q: str = "",
+	limit: int = Query(default=50, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[CommunityTopicSchema]:
-	_ = master
-	topics = db.scalars(select(models.CommunityTopic).order_by(models.CommunityTopic.last_message_at.desc())).all()
+	query = select(models.CommunityTopic).order_by(
+		models.CommunityTopic.is_pinned.desc(),
+		models.CommunityTopic.last_message_at.desc(),
+	)
+	topics = db.scalars(query.offset(offset).limit(limit)).all()
 	result = []
 	for topic in topics:
 		if q and q.lower() not in topic.title.lower() and q.lower() not in topic.last_message.lower():
 			continue
+		unread = _topic_unread_for_master(db, master.id, topic)
 		result.append(
 			CommunityTopicSchema(
 				id=topic.external_id,
@@ -908,12 +917,27 @@ async def list_topics(
 				last_message=topic.last_message,
 				last_message_at=topic.last_message_at,
 				participant_initials=[item.strip() for item in topic.participant_initials.split(",") if item.strip()],
-				unread_count=topic.unread_count,
+				unread_count=unread,
 				is_pinned=topic.is_pinned,
+				is_closed=topic.is_closed,
 				emoji=topic.emoji,
 			)
 		)
 	return result
+
+
+def _topic_unread_for_master(db: Session, master_id: int, topic: models.CommunityTopic) -> int:
+	read = db.scalar(
+		select(models.CommunityTopicRead).where(
+			models.CommunityTopicRead.master_id == master_id,
+			models.CommunityTopicRead.topic_id == topic.id,
+		)
+	)
+	if read is None:
+		return 1 if topic.unread_count > 0 or topic.last_message else 0
+	if topic.last_message_at > read.last_read_at:
+		return max(1, topic.unread_count)
+	return 0
 
 
 @router.post("/community/topics", response_model=CommunityTopicSchema)
@@ -930,11 +954,13 @@ async def create_topic(
 		external_id=external_id,
 		title=body.title.strip(),
 		author_name=author_name,
+		author_master_id=master.id,
 		emoji="✨",
 		participant_count=1,
 		participant_initials=author_initial,
 		last_message=body.story.strip(),
 		last_message_at=now,
+		is_closed=False,
 	)
 	db.add(topic)
 	db.flush()
@@ -943,9 +969,17 @@ async def create_topic(
 			external_id=f"m-{int(now.timestamp())}",
 			topic_id=topic.id,
 			author_name=author_name,
+			author_master_id=master.id,
 			text=body.story.strip(),
 			sent_at=now,
 			is_mine=True,
+		)
+	)
+	db.add(
+		models.CommunityTopicRead(
+			master_id=master.id,
+			topic_id=topic.id,
+			last_read_at=now,
 		)
 	)
 	db.commit()
@@ -961,6 +995,85 @@ async def create_topic(
 		participant_initials=[author_initial],
 		unread_count=0,
 		is_pinned=False,
+		is_closed=False,
+		emoji=topic.emoji,
+	)
+
+
+@router.patch("/community/topics/{topic_id}/read", response_model=CommunityTopicSchema)
+async def mark_topic_read(
+	topic_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> CommunityTopicSchema:
+	topic = db.scalar(select(models.CommunityTopic).where(models.CommunityTopic.external_id == topic_id))
+	if topic is None:
+		raise HTTPException(status_code=404, detail="Topic not found")
+
+	now = datetime.now(timezone.utc)
+	read = db.scalar(
+		select(models.CommunityTopicRead).where(
+			models.CommunityTopicRead.master_id == master.id,
+			models.CommunityTopicRead.topic_id == topic.id,
+		)
+	)
+	if read is None:
+		db.add(
+			models.CommunityTopicRead(
+				master_id=master.id,
+				topic_id=topic.id,
+				last_read_at=now,
+			)
+		)
+	else:
+		read.last_read_at = now
+		db.add(read)
+	db.commit()
+	db.refresh(topic)
+	return CommunityTopicSchema(
+		id=topic.external_id,
+		title=topic.title,
+		author_name=topic.author_name,
+		created_at=topic.created_at,
+		participant_count=topic.participant_count,
+		last_message=topic.last_message,
+		last_message_at=topic.last_message_at,
+		participant_initials=[item.strip() for item in topic.participant_initials.split(",") if item.strip()],
+		unread_count=0,
+		is_pinned=topic.is_pinned,
+		is_closed=topic.is_closed,
+		emoji=topic.emoji,
+	)
+
+
+@router.post("/community/topics/{topic_id}/close", response_model=CommunityTopicSchema)
+async def close_topic(
+	topic_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> CommunityTopicSchema:
+	topic = db.scalar(select(models.CommunityTopic).where(models.CommunityTopic.external_id == topic_id))
+	if topic is None:
+		raise HTTPException(status_code=404, detail="Topic not found")
+	if topic.author_master_id is not None and topic.author_master_id != master.id:
+		raise HTTPException(status_code=403, detail="Закрыть тему может только автор")
+
+	topic.is_closed = True
+	db.add(topic)
+	db.commit()
+	db.refresh(topic)
+	return CommunityTopicSchema(
+		id=topic.external_id,
+		title=topic.title,
+		author_name=topic.author_name,
+		created_at=topic.created_at,
+		participant_count=topic.participant_count,
+		last_message=topic.last_message,
+		last_message_at=topic.last_message_at,
+		participant_initials=[item.strip() for item in topic.participant_initials.split(",") if item.strip()],
+		unread_count=_topic_unread_for_master(db, master.id, topic),
+		is_pinned=topic.is_pinned,
+		is_closed=topic.is_closed,
 		emoji=topic.emoji,
 	)
 
@@ -968,6 +1081,8 @@ async def create_topic(
 @router.get("/community/topics/{topic_id}/messages", response_model=list[CommunityMessageSchema])
 async def list_topic_messages(
 	topic_id: str,
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[CommunityMessageSchema]:
@@ -979,6 +1094,8 @@ async def list_topic_messages(
 		select(models.CommunityMessage)
 		.where(models.CommunityMessage.topic_id == topic.id)
 		.order_by(models.CommunityMessage.sent_at)
+		.offset(offset)
+		.limit(limit)
 	).all()
 	return [
 		CommunityMessageSchema(
@@ -987,7 +1104,9 @@ async def list_topic_messages(
 			author_name=message.author_name,
 			text=message.text,
 			sent_at=message.sent_at,
-			is_mine=message.author_name == master.first_name,
+			is_mine=message.author_master_id == master.id
+			if message.author_master_id is not None
+			else message.author_name == master.first_name,
 		)
 		for message in messages
 	]
@@ -1003,12 +1122,15 @@ async def send_topic_message(
 	topic = db.scalar(select(models.CommunityTopic).where(models.CommunityTopic.external_id == topic_id))
 	if topic is None:
 		raise HTTPException(status_code=404, detail="Topic not found")
+	if topic.is_closed:
+		raise HTTPException(status_code=400, detail="Тема закрыта")
 
 	now = datetime.now(timezone.utc)
 	message = models.CommunityMessage(
 		external_id=f"m-{int(now.timestamp())}",
 		topic_id=topic.id,
 		author_name=master.first_name,
+		author_master_id=master.id,
 		text=body.text.strip(),
 		sent_at=now,
 		is_mine=True,
@@ -1030,6 +1152,8 @@ async def send_topic_message(
 @router.get("/support/tickets", response_model=list[SupportTicketSchema])
 async def list_support_tickets(
 	q: str = "",
+	limit: int = Query(default=50, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[SupportTicketSchema]:
@@ -1037,6 +1161,8 @@ async def list_support_tickets(
 		select(models.SupportTicket)
 		.where(models.SupportTicket.master_id == master.id)
 		.order_by(models.SupportTicket.last_message_at.desc())
+		.offset(offset)
+		.limit(limit)
 	).all()
 	result = []
 	for ticket in tickets:
@@ -1088,7 +1214,6 @@ async def create_support_ticket(
 	)
 	db.commit()
 	db.refresh(ticket)
-	_add_support_admin_reply(db, ticket)
 	return SupportTicketSchema(
 		id=ticket.external_id,
 		title=ticket.title,
@@ -1104,15 +1229,23 @@ async def create_support_ticket(
 @router.get("/support/tickets/{ticket_id}/messages", response_model=list[CommunityMessageSchema])
 async def list_support_messages(
 	ticket_id: str,
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[CommunityMessageSchema]:
 	ticket = _get_master_support_ticket(db, master.id, ticket_id)
+	if ticket.unread_count:
+		ticket.unread_count = 0
+		db.add(ticket)
+		db.commit()
 
 	messages = db.scalars(
 		select(models.SupportMessage)
 		.where(models.SupportMessage.ticket_id == ticket.id)
 		.order_by(models.SupportMessage.sent_at)
+		.offset(offset)
+		.limit(limit)
 	).all()
 	return [
 		CommunityMessageSchema(
@@ -1122,31 +1255,19 @@ async def list_support_messages(
 			text=message.text,
 			sent_at=message.sent_at,
 			is_mine=message.is_mine,
+			attachment_url=_attachment_url(message.attachment_path),
+			attachment_name=message.attachment_name,
 		)
 		for message in messages
 	]
 
 
-def _add_support_admin_reply(db: Session, ticket: models.SupportTicket) -> None:
-	if ticket.status in {"closed", "cancelled"}:
-		return
+def _attachment_url(relative_path: str | None) -> str | None:
+	if not relative_path:
+		return None
+	from app.config import settings
 
-	now = datetime.now(timezone.utc)
-	reply_text = "Спасибо за обращение! Мы уже смотрим ваш вопрос и скоро вернёмся с ответом."
-	reply = models.SupportMessage(
-		external_id=f"s-admin-{int(now.timestamp())}",
-		ticket_id=ticket.id,
-		author_name="Техподдержка",
-		text=reply_text,
-		sent_at=now,
-		is_mine=False,
-	)
-	ticket.last_message = reply_text
-	ticket.last_message_at = now
-	ticket.status = "in_progress"
-	ticket.unread_count += 1
-	db.add(reply)
-	db.commit()
+	return f"{settings.public_base_url.rstrip('/')}/uploads/{relative_path}"
 
 
 @router.post("/support/tickets/{ticket_id}/messages", response_model=CommunityMessageSchema)
@@ -1174,7 +1295,6 @@ async def send_support_message(
 	ticket.status = "waiting_for_response"
 	db.add(message)
 	db.commit()
-	_add_support_admin_reply(db, ticket)
 	return CommunityMessageSchema(
 		id=message.external_id,
 		topic_id=ticket_id,
@@ -1182,6 +1302,57 @@ async def send_support_message(
 		text=message.text,
 		sent_at=message.sent_at,
 		is_mine=True,
+	)
+
+
+@router.post("/support/tickets/{ticket_id}/attachments", response_model=CommunityMessageSchema)
+async def upload_support_attachment(
+	ticket_id: str,
+	file: UploadFile = File(...),
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> CommunityMessageSchema:
+	ticket = _get_master_support_ticket(db, master.id, ticket_id)
+	if ticket.status in {"closed", "cancelled"}:
+		raise HTTPException(status_code=400, detail="Ticket is closed")
+
+	payload = await file.read()
+	if not payload:
+		raise HTTPException(status_code=400, detail="Пустой файл")
+	if len(payload) > 10 * 1024 * 1024:
+		raise HTTPException(status_code=400, detail="Файл больше 10 МБ")
+
+	filename = (file.filename or "attachment.bin").replace("/", "_")
+	relative_path = f"support/{ticket.external_id}_{uuid4().hex}_{filename}"
+	target_dir = uploads_root() / "support"
+	target_dir.mkdir(parents=True, exist_ok=True)
+	(uploads_root() / relative_path).write_bytes(payload)
+
+	now = datetime.now(timezone.utc)
+	message = models.SupportMessage(
+		external_id=f"s-file-{int(now.timestamp())}",
+		ticket_id=ticket.id,
+		author_name=master.first_name,
+		text=f"Вложение: {filename}",
+		attachment_path=relative_path,
+		attachment_name=filename,
+		sent_at=now,
+		is_mine=True,
+	)
+	ticket.last_message = message.text
+	ticket.last_message_at = now
+	ticket.status = "waiting_for_response"
+	db.add(message)
+	db.commit()
+	return CommunityMessageSchema(
+		id=message.external_id,
+		topic_id=ticket_id,
+		author_name=message.author_name,
+		text=message.text,
+		sent_at=message.sent_at,
+		is_mine=True,
+		attachment_url=_attachment_url(relative_path),
+		attachment_name=filename,
 	)
 
 
@@ -1205,4 +1376,108 @@ async def cancel_support_ticket(
 		last_message_at=ticket.last_message_at,
 		status=ticket.status,
 		unread_count=ticket.unread_count,
+	)
+
+
+@router.post("/devices/register")
+async def register_device(
+	body: DeviceRegisterRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> dict[str, bool]:
+	token = body.token.strip()
+	platform = body.platform.strip().lower() or "ios"
+	existing = db.scalar(select(models.DeviceToken).where(models.DeviceToken.token == token))
+	now = datetime.now(timezone.utc)
+	if existing is None:
+		db.add(
+			models.DeviceToken(
+				master_id=master.id,
+				token=token,
+				platform=platform,
+				created_at=now,
+				updated_at=now,
+			)
+		)
+	else:
+		existing.master_id = master.id
+		existing.platform = platform
+		existing.updated_at = now
+		db.add(existing)
+	db.commit()
+	return {"ok": True}
+
+
+@router.get("/notifications", response_model=list[NotificationSchema])
+async def list_notifications(
+	limit: int = Query(default=50, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[NotificationSchema]:
+	import json as json_lib
+
+	rows = db.scalars(
+		select(models.AppNotification)
+		.where(models.AppNotification.master_id == master.id)
+		.order_by(models.AppNotification.created_at.desc())
+		.offset(offset)
+		.limit(limit)
+	).all()
+	result = []
+	for row in rows:
+		payload = None
+		if row.payload_json:
+			try:
+				payload = json_lib.loads(row.payload_json)
+			except json_lib.JSONDecodeError:
+				payload = None
+		result.append(
+			NotificationSchema(
+				id=row.id,
+				title=row.title,
+				body=row.body,
+				kind=row.kind,
+				is_read=row.is_read,
+				created_at=row.created_at,
+				payload=payload if isinstance(payload, dict) else None,
+			)
+		)
+	return result
+
+
+@router.patch("/notifications/{notification_id}/read", response_model=NotificationSchema)
+async def mark_notification_read(
+	notification_id: int,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> NotificationSchema:
+	import json as json_lib
+
+	row = db.scalar(
+		select(models.AppNotification).where(
+			models.AppNotification.id == notification_id,
+			models.AppNotification.master_id == master.id,
+		)
+	)
+	if row is None:
+		raise HTTPException(status_code=404, detail="Notification not found")
+	row.is_read = True
+	db.add(row)
+	db.commit()
+	db.refresh(row)
+	payload = None
+	if row.payload_json:
+		try:
+			payload = json_lib.loads(row.payload_json)
+		except json_lib.JSONDecodeError:
+			payload = None
+	return NotificationSchema(
+		id=row.id,
+		title=row.title,
+		body=row.body,
+		kind=row.kind,
+		is_read=row.is_read,
+		created_at=row.created_at,
+		payload=payload if isinstance(payload, dict) else None,
 	)

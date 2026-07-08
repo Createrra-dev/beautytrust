@@ -76,7 +76,7 @@ class CommunityService extends ChangeNotifier {
 
 	Future<void> loadMessages(String topicId) async {
 		_messagesByTopic[topicId] = await _api.fetchCommunityMessages(topicId);
-		markTopicRead(topicId);
+		await markTopicRead(topicId);
 		notifyListeners();
 	}
 
@@ -107,18 +107,28 @@ class CommunityService extends ChangeNotifier {
 		return message;
 	}
 
-	void markTopicRead(String topicId) {
+	Future<void> markTopicRead(String topicId) async {
 		final topicIndex = _topics.indexWhere((topic) => topic.id == topicId);
 		if (topicIndex < 0) {
 			return;
 		}
 
-		final topic = _topics[topicIndex];
-		if (topic.unreadCount == 0) {
-			return;
+		try {
+			final updated = await _api.markCommunityTopicRead(topicId);
+			_topics[topicIndex] = updated;
+		} catch (_) {
+			_topics[topicIndex] = _topics[topicIndex].copyWith(unreadCount: 0);
 		}
-
-		_topics[topicIndex] = topic.copyWith(unreadCount: 0);
 		notifyListeners();
+	}
+
+	Future<CommunityTopic?> closeTopic(String topicId) async {
+		final updated = await _api.closeCommunityTopic(topicId);
+		final topicIndex = _topics.indexWhere((topic) => topic.id == topicId);
+		if (topicIndex >= 0) {
+			_topics[topicIndex] = updated;
+		}
+		notifyListeners();
+		return updated;
 	}
 }

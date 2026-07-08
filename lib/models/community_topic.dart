@@ -10,6 +10,7 @@ class CommunityTopic {
 		required this.participantInitials,
 		this.unreadCount = 0,
 		this.isPinned = false,
+		this.isClosed = false,
 		this.emoji = '💬',
 	});
 
@@ -23,6 +24,7 @@ class CommunityTopic {
 	final List<String> participantInitials;
 	final int unreadCount;
 	final bool isPinned;
+	final bool isClosed;
 	final String emoji;
 
 	CommunityTopic copyWith({
@@ -31,6 +33,7 @@ class CommunityTopic {
 		int? participantCount,
 		int? unreadCount,
 		List<String>? participantInitials,
+		bool? isClosed,
 	}) {
 		return CommunityTopic(
 			id: id,
@@ -43,6 +46,7 @@ class CommunityTopic {
 			participantInitials: participantInitials ?? this.participantInitials,
 			unreadCount: unreadCount ?? this.unreadCount,
 			isPinned: isPinned,
+			isClosed: isClosed ?? this.isClosed,
 			emoji: emoji,
 		);
 	}

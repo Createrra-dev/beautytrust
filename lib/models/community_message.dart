@@ -6,6 +6,8 @@ class CommunityMessage {
 		required this.text,
 		required this.sentAt,
 		this.isMine = false,
+		this.attachmentUrl,
+		this.attachmentName,
 	});
 
 	final String id;
@@ -14,4 +16,6 @@ class CommunityMessage {
 	final String text;
 	final DateTime sentAt;
 	final bool isMine;
+	final String? attachmentUrl;
+	final String? attachmentName;
 }

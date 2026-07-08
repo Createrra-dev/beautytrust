@@ -120,8 +120,10 @@ class CommunityTopic(Base):
 	external_id: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
 	title: Mapped[str] = mapped_column(String(300), nullable=False)
 	author_name: Mapped[str] = mapped_column(String(120), nullable=False)
+	author_master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True, index=True)
 	emoji: Mapped[str] = mapped_column(String(10), nullable=False, default="💬")
 	is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	is_closed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	participant_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 	participant_initials: Mapped[str] = mapped_column(String(100), nullable=False, default="")
 	last_message: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -139,11 +141,21 @@ class CommunityMessage(Base):
 	external_id: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
 	topic_id: Mapped[int] = mapped_column(ForeignKey("community_topics.id"), index=True)
 	author_name: Mapped[str] = mapped_column(String(120), nullable=False)
+	author_master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True, index=True)
 	text: Mapped[str] = mapped_column(Text, nullable=False)
 	is_mine: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 	topic: Mapped[CommunityTopic] = relationship(back_populates="messages")
+
+
+class CommunityTopicRead(Base):
+	__tablename__ = "community_topic_reads"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	master_id: Mapped[int] = mapped_column(ForeignKey("masters.id"), index=True)
+	topic_id: Mapped[int] = mapped_column(ForeignKey("community_topics.id"), index=True)
+	last_read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class SupportTicket(Base):
@@ -172,9 +184,39 @@ class SupportMessage(Base):
 	author_name: Mapped[str] = mapped_column(String(120), nullable=False)
 	text: Mapped[str] = mapped_column(Text, nullable=False)
 	is_mine: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	attachment_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+	attachment_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 	sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 	ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
+
+
+class DeviceToken(Base):
+	__tablename__ = "device_tokens"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	master_id: Mapped[int] = mapped_column(ForeignKey("masters.id"), index=True)
+	token: Mapped[str] = mapped_column(String(512), nullable=False, unique=True)
+	platform: Mapped[str] = mapped_column(String(20), nullable=False, default="ios")
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+	updated_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		server_default=func.now(),
+		onupdate=func.now(),
+	)
+
+
+class AppNotification(Base):
+	__tablename__ = "notifications"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	master_id: Mapped[int] = mapped_column(ForeignKey("masters.id"), index=True)
+	title: Mapped[str] = mapped_column(String(200), nullable=False)
+	body: Mapped[str] = mapped_column(Text, nullable=False)
+	kind: Mapped[str] = mapped_column(String(50), nullable=False, default="general")
+	payload_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+	is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class OtpSession(Base):

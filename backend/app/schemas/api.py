@@ -144,6 +144,7 @@ class CommunityTopicSchema(BaseModel):
 	participant_initials: list[str]
 	unread_count: int = 0
 	is_pinned: bool = False
+	is_closed: bool = False
 	emoji: str = "💬"
 
 
@@ -154,6 +155,8 @@ class CommunityMessageSchema(BaseModel):
 	text: str
 	sent_at: datetime
 	is_mine: bool
+	attachment_url: str | None = None
+	attachment_name: str | None = None
 
 
 class CommunityTopicCreateRequest(BaseModel):
@@ -232,3 +235,22 @@ class SubscribeResponse(BaseModel):
 	plan_id: str
 	activated: bool = False
 	subscription: SubscriptionSchema | None = None
+
+
+class DeviceRegisterRequest(BaseModel):
+	token: str = Field(min_length=8, max_length=512)
+	platform: str = Field(default="ios", max_length=20)
+
+
+class NotificationSchema(BaseModel):
+	id: int
+	title: str
+	body: str
+	kind: str
+	is_read: bool
+	created_at: datetime
+	payload: dict | None = None
+
+
+class AdminSupportReplyRequest(BaseModel):
+	text: str = Field(min_length=1, max_length=4000)
