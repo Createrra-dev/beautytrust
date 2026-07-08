@@ -428,22 +428,22 @@
 			<div class="phase-body">
 				<div class="task-group">
 					<h4>3.1 Модель подписок <span class="badge badge-p2">P2</span></h4>
-					<label class="task"><input type="checkbox" data-id="3-1-1"><span class="task-text">Таблицы: tariff_plans, subscription_payments</span></label>
-					<label class="task"><input type="checkbox" data-id="3-1-2"><span class="task-text">Поля masters: tariff_plan_id, tariff_expires_at</span></label>
+					<label class="task"><input type="checkbox" data-id="3-1-1" checked><span class="task-text">Таблицы: tariff_plans, subscription_payments<span class="task-note">Миграция 0009</span></span></label>
+					<label class="task"><input type="checkbox" data-id="3-1-2" checked><span class="task-text">Поля masters: tariff_plan_id, tariff_expires_at</span></label>
 				</div>
 				<div class="task-group">
 					<h4>3.2 API тарифов <span class="badge badge-p2">P2</span></h4>
-					<label class="task"><input type="checkbox" data-id="3-2-1"><span class="task-text"><code>GET /api/tariffs</code></span></label>
-					<label class="task"><input type="checkbox" data-id="3-2-2"><span class="task-text"><code>GET /api/profile/subscription</code></span></label>
-					<label class="task"><input type="checkbox" data-id="3-2-3"><span class="task-text"><code>POST /api/tariffs/{plan_id}/subscribe</code> → T-Bank Init</span></label>
-					<label class="task"><input type="checkbox" data-id="3-2-4"><span class="task-text">Активация подписки после CONFIRMED</span></label>
-					<label class="task"><input type="checkbox" data-id="3-2-5"><span class="task-text">Фронт: обновление тарифа в профиле после оплаты</span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-1" checked><span class="task-text"><code>GET /api/tariffs</code></span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-2" checked><span class="task-text"><code>GET /api/profile/subscription</code></span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-3" checked><span class="task-text"><code>POST /api/tariffs/{plan_id}/subscribe</code> → T-Bank Init</span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-4" checked><span class="task-text">Активация подписки после CONFIRMED</span></label>
+					<label class="task"><input type="checkbox" data-id="3-2-5" checked><span class="task-text">Фронт: обновление тарифа в профиле после оплаты</span></label>
 				</div>
 				<div class="task-group">
 					<h4>3.3 T-Bank (доработка) <span class="badge badge-p2">P2</span></h4>
-					<label class="task"><input type="checkbox" data-id="3-3-1"><span class="task-text"><code>POST /api/payments/webhook</code></span></label>
-					<label class="task"><input type="checkbox" data-id="3-3-2"><span class="task-text">Привязка order_id к master_id + plan_id</span></label>
-					<label class="task"><input type="checkbox" data-id="3-3-3"><span class="task-text">Перенос payments в Postgres</span></label>
+					<label class="task"><input type="checkbox" data-id="3-3-1" checked><span class="task-text"><code>POST /api/payments/webhook</code></span></label>
+					<label class="task"><input type="checkbox" data-id="3-3-2" checked><span class="task-text">Привязка order_id к master_id + plan_id</span></label>
+					<label class="task"><input type="checkbox" data-id="3-3-3" checked><span class="task-text">Перенос payments в Postgres<span class="task-note">Уже было; расширено master_id/plan_id</span></span></label>
 				</div>
 			</div>
 		</section>
@@ -545,7 +545,7 @@
 					<h4>Sprint 2</h4>
 					<label class="task"><input type="checkbox" data-id="s2-1" checked><span class="task-text">Профиль (редактирование) + аватар на сервер<span class="task-note">PATCH + avatar POST/DELETE</span></span></label>
 					<label class="task"><input type="checkbox" data-id="s2-2" checked><span class="task-text">Услуги мастера (CRUD + фронт)<span class="task-note">MasterServicesScreen + API</span></span></label>
-					<label class="task"><input type="checkbox" data-id="s2-3"><span class="task-text">Платежи → подписки</span></label>
+					<label class="task"><input type="checkbox" data-id="s2-3" checked><span class="task-text">Платежи → подписки</span></label>
 				</div>
 				<div class="task-group">
 					<h4>Sprint 3</h4>
@@ -566,7 +566,7 @@
 	<script>
 		const STORAGE_KEY = 'beautytrust-tz-progress';
 		const STORAGE_VERSION_KEY = 'beautytrust-tz-progress-version';
-		const PROGRESS_VERSION = 8;
+		const PROGRESS_VERSION = 9;
 
 		function loadProgress() {
 			try {

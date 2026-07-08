@@ -1,9 +1,14 @@
 import '../models/tariff_plan.dart';
+import '../services/api/app_api_repository.dart';
+import '../services/api/beauty_trust_api.dart';
 
 class TariffPlansData {
 	TariffPlansData._();
 
-	static const List<TariffPlan> masterPlans = [
+	static final AppApiRepository _api = AppApiRepository();
+	static List<TariffPlan> _cache = [];
+
+	static const List<TariffPlan> masterPlansFallback = [
 		TariffPlan(
 			id: 'free',
 			title: 'Бесплатно',
@@ -37,7 +42,7 @@ class TariffPlansData {
 		),
 	];
 
-	static const List<TariffPlan> studioPlans = [
+	static const List<TariffPlan> studioPlansFallback = [
 		TariffPlan(
 			id: 'studio',
 			title: 'Студия',
@@ -70,6 +75,34 @@ class TariffPlansData {
 		),
 	];
 
+	static List<TariffPlan> get masterPlans {
+		final plans = _cache.where((plan) => plan.audience == TariffAudience.masters).toList();
+		return plans.isEmpty ? masterPlansFallback : plans;
+	}
+
+	static List<TariffPlan> get studioPlans {
+		final plans = _cache.where((plan) => plan.audience == TariffAudience.studios).toList();
+		return plans.isEmpty ? studioPlansFallback : plans;
+	}
+
+	static Future<List<TariffPlan>> load({TariffAudience? audience}) async {
+		try {
+			_cache = await _api.fetchTariffs(
+				audience: audience == null
+					? null
+					: (audience == TariffAudience.studios ? 'studios' : 'masters'),
+			);
+			if (audience == null && _cache.isEmpty) {
+				_cache = await _api.fetchTariffs();
+			}
+		} on ApiException {
+			if (_cache.isEmpty) {
+				_cache = [...masterPlansFallback, ...studioPlansFallback];
+			}
+		}
+		return plansFor(audience ?? TariffAudience.masters);
+	}
+
 	static List<TariffPlan> plansFor(TariffAudience audience) {
 		return switch (audience) {
 			TariffAudience.masters => masterPlans,
@@ -83,7 +116,6 @@ class TariffPlansData {
 				return plan;
 			}
 		}
-
 		return null;
 	}
 }

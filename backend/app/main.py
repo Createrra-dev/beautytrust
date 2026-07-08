@@ -26,6 +26,7 @@ from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.mobile import router as mobile_router
 from app.routers.payments import return_router, router as payments_router
+from app.routers.tariffs import router as tariffs_router
 from app.services.telegram_bot import setup_webhook
 
 logging.basicConfig(
@@ -75,6 +76,7 @@ app.include_router(return_router)
 app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(mobile_router)
+app.include_router(tariffs_router)
 
 uploads_dir = Path(settings.uploads_dir)
 if not uploads_dir.is_absolute():

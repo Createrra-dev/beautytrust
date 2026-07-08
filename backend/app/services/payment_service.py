@@ -1,5 +1,10 @@
 from typing import Any
 
+from sqlalchemy import select
+
+from app.db import models
+from app.db.session import SessionLocal
+from app.services.subscription_service import activate_from_payment_attempt
 from app.storage.payment_repository import PaymentRepository
 from app.tbank.client import TBankClient
 
@@ -33,6 +38,17 @@ class PaymentService:
 		success = status in SUCCESS_STATUSES
 		return status, success
 
+	def _activate_if_needed(self, payment_id: str) -> None:
+		with SessionLocal() as db:
+			attempt = db.scalar(
+				select(models.PaymentAttempt)
+				.where(models.PaymentAttempt.payment_id == payment_id)
+				.order_by(models.PaymentAttempt.id.desc())
+			)
+			if attempt is None or not attempt.success:
+				return
+			activate_from_payment_attempt(db, attempt)
+
 	async def refresh_payment_status(self, payment_id: str) -> dict[str, Any]:
 		try:
 			result = await self._tbank_client.get_payment_state(payment_id)
@@ -57,6 +73,9 @@ class PaymentService:
 		)
 		if updated is None:
 			raise KeyError(f"Payment attempt with payment_id={payment_id} not found")
+
+		if success:
+			self._activate_if_needed(payment_id)
 
 		return updated
 
@@ -86,6 +105,7 @@ class PaymentService:
 		success_url: str,
 		fail_url: str,
 		amount: int | None = None,
+		notification_url: str | None = None,
 	) -> dict[str, Any]:
 		return await self._tbank_client.init_payment(
 			order_id=order_id,
@@ -93,4 +113,5 @@ class PaymentService:
 			description=description,
 			success_url=success_url,
 			fail_url=fail_url,
+			notification_url=notification_url,
 		)

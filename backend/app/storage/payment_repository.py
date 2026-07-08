@@ -45,6 +45,9 @@ def _attempt_to_dict(attempt: models.PaymentAttempt) -> dict[str, Any]:
 		"return_result": attempt.return_result,
 		"last_error": attempt.last_error,
 		"tbank_response": tbank_response,
+		"master_id": attempt.master_id,
+		"tariff_plan_id": attempt.tariff_plan_id,
+		"months": attempt.months,
 		"created_at": created_at,
 		"updated_at": updated_at,
 	}
@@ -61,6 +64,9 @@ class PaymentRepository:
 		amount: int,
 		description: str,
 		status: str = "CREATED",
+		master_id: int | None = None,
+		tariff_plan_id: str | None = None,
+		months: int | None = None,
 	) -> dict[str, Any]:
 		now = _utc_now()
 		with self._session() as db:
@@ -70,6 +76,9 @@ class PaymentRepository:
 				description=description,
 				status=status,
 				success=False,
+				master_id=master_id,
+				tariff_plan_id=tariff_plan_id,
+				months=months,
 				created_at=now,
 				updated_at=now,
 			)

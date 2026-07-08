@@ -196,3 +196,39 @@ class CheckHistoryRecordSchema(BaseModel):
 
 class PhoneCheckRequest(BaseModel):
 	phone: str = Field(min_length=10, max_length=20)
+
+
+class TariffPlanSchema(BaseModel):
+	id: str
+	title: str
+	monthly_price: int
+	trial_label: str
+	features: list[str]
+	card_button_label: str
+	audience: str
+	is_popular: bool = False
+
+
+class SubscriptionSchema(BaseModel):
+	plan_id: str
+	plan_title: str
+	tariff_label: str
+	expires_at: datetime | None = None
+	is_active: bool
+	monthly_price: int = 0
+
+
+class SubscribeRequest(BaseModel):
+	months: int = Field(default=1, ge=1, le=12)
+	return_base_url: str | None = None
+
+
+class SubscribeResponse(BaseModel):
+	payment_id: str | None = None
+	payment_url: str | None = None
+	order_id: str | None = None
+	amount: int
+	months: int
+	plan_id: str
+	activated: bool = False
+	subscription: SubscriptionSchema | None = None

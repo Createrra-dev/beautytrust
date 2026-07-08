@@ -4,6 +4,8 @@ import '../../config/app_config.dart';
 import '../../models/appointment_record.dart';
 import '../../models/tariff_payment_summary.dart';
 import '../../models/tariff_plan.dart';
+import '../../services/api/app_api_repository.dart';
+import '../../services/api/beauty_trust_api.dart';
 import '../../services/payment_api.dart';
 import '../../services/tariff_pricing_service.dart';
 import '../../theme/app_theme.dart';
@@ -26,6 +28,7 @@ class TariffPaymentScreen extends StatefulWidget {
 }
 
 class _TariffPaymentScreenState extends State<TariffPaymentScreen> {
+	final _api = AppApiRepository();
 	final PaymentApi _paymentApi = PaymentApi();
 	var _selectedMonths = TariffSubscriptionPeriod.options.first.months;
 	var _isPaying = false;
@@ -189,9 +192,9 @@ class _TariffPaymentScreenState extends State<TariffPaymentScreen> {
 		});
 
 		try {
-			final initResult = await _paymentApi.initPayment(
-				amountKopecks: summary.amountKopecks,
-				description: summary.description,
+			final subscribeResult = await _api.subscribeToPlan(
+				planId: widget.plan.id,
+				months: _selectedMonths,
 				returnBaseUrl: AppConfig.apiBaseUrl,
 			);
 
@@ -199,10 +202,28 @@ class _TariffPaymentScreenState extends State<TariffPaymentScreen> {
 				return;
 			}
 
+			if (subscribeResult.activated) {
+				Navigator.of(context).pushNamedAndRemoveUntil(
+					TariffSuccessScreen.routeName,
+					(route) => route.isFirst,
+					arguments: summary,
+				);
+				return;
+			}
+
+			final paymentUrl = subscribeResult.paymentUrl;
+			final paymentId = subscribeResult.paymentId;
+			if (paymentUrl == null || paymentId == null) {
+				setState(() {
+					_errorText = 'Не удалось создать платёж';
+				});
+				return;
+			}
+
 			final webViewResult = await Navigator.of(context).push<PaymentWebViewResult>(
 				MaterialPageRoute(
 					builder: (context) => PaymentWebViewScreen(
-						paymentUrl: initResult.paymentUrl,
+						paymentUrl: paymentUrl,
 					),
 				),
 			);
@@ -218,8 +239,7 @@ class _TariffPaymentScreenState extends State<TariffPaymentScreen> {
 				return;
 			}
 
-			final statusResult =
-				await _paymentApi.getPaymentStatus(initResult.paymentId);
+			final statusResult = await _paymentApi.getPaymentStatus(paymentId);
 
 			if (!mounted) {
 				return;
@@ -237,6 +257,14 @@ class _TariffPaymentScreenState extends State<TariffPaymentScreen> {
 				(route) => route.isFirst,
 				arguments: summary,
 			);
+		} on ApiException catch (error) {
+			if (!mounted) {
+				return;
+			}
+
+			setState(() {
+				_errorText = error.message;
+			});
 		} on PaymentApiException catch (error) {
 			if (!mounted) {
 				return;

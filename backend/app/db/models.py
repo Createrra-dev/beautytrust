@@ -17,13 +17,21 @@ class Master(Base):
 	clients_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	prevented_no_shows: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	protected_income: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-	tariff_label: Mapped[str] = mapped_column(String(120), nullable=False, default="Мастер")
+	tariff_label: Mapped[str] = mapped_column(String(120), nullable=False, default="Бесплатно")
+	tariff_plan_id: Mapped[str | None] = mapped_column(
+		ForeignKey("tariff_plans.id"),
+		nullable=True,
+		index=True,
+	)
+	tariff_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	avatar_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
 	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)
 	email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
 	password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 	telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, unique=True, index=True)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+	tariff_plan: Mapped["TariffPlan | None"] = relationship(back_populates="masters")
 
 
 class MasterService(Base):
@@ -215,6 +223,24 @@ class CheckHistoryRecord(Base):
 	checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class TariffPlan(Base):
+	__tablename__ = "tariff_plans"
+
+	id: Mapped[str] = mapped_column(String(50), primary_key=True)
+	title: Mapped[str] = mapped_column(String(120), nullable=False)
+	monthly_price: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+	trial_label: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+	features_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+	card_button_label: Mapped[str] = mapped_column(String(120), nullable=False, default="Выбрать тариф")
+	audience: Mapped[str] = mapped_column(String(20), nullable=False, default="masters")
+	is_popular: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+	is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+	masters: Mapped[list["Master"]] = relationship(back_populates="tariff_plan")
+	subscription_payments: Mapped[list["SubscriptionPayment"]] = relationship(back_populates="tariff_plan")
+
+
 class PaymentAttempt(Base):
 	__tablename__ = "payment_attempts"
 
@@ -229,5 +255,25 @@ class PaymentAttempt(Base):
 	return_result: Mapped[str | None] = mapped_column(String(50), nullable=True)
 	last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 	tbank_response: Mapped[str | None] = mapped_column(Text, nullable=True)
+	master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True, index=True)
+	tariff_plan_id: Mapped[str | None] = mapped_column(ForeignKey("tariff_plans.id"), nullable=True, index=True)
+	months: Mapped[int | None] = mapped_column(Integer, nullable=True)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SubscriptionPayment(Base):
+	__tablename__ = "subscription_payments"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	master_id: Mapped[int] = mapped_column(ForeignKey("masters.id"), index=True)
+	tariff_plan_id: Mapped[str] = mapped_column(ForeignKey("tariff_plans.id"), index=True)
+	payment_attempt_id: Mapped[int | None] = mapped_column(ForeignKey("payment_attempts.id"), nullable=True, index=True)
+	months: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+	amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+	status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+	activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+	expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+	tariff_plan: Mapped["TariffPlan"] = relationship(back_populates="subscription_payments")

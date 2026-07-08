@@ -9,6 +9,7 @@ import '../../models/dashboard_stats.dart';
 import '../../models/master_profile.dart';
 import '../../models/master_service.dart';
 import '../../models/support_ticket.dart';
+import '../../models/tariff_plan.dart';
 import '../../models/visit_result.dart';
 import '../../utils/phone_formatter.dart';
 import 'beauty_trust_api.dart';
@@ -279,6 +280,35 @@ class AppApiRepository {
 
 	Future<void> cancelSupportTicket(String ticketId) async {
 		await _api.postJson('/api/support/tickets/$ticketId/cancel');
+	}
+
+	Future<List<TariffPlan>> fetchTariffs({String? audience}) async {
+		final query = <String, String>{};
+		if (audience != null) {
+			query['audience'] = audience;
+		}
+		final items = await _api.getJsonList('/api/tariffs', query: query.isEmpty ? null : query);
+		return items
+			.map((item) => TariffPlan.fromJson(item as Map<String, dynamic>))
+			.toList();
+	}
+
+	Future<MasterSubscription> fetchSubscription() async {
+		final json = await _api.getJson('/api/profile/subscription');
+		return MasterSubscription.fromJson(json);
+	}
+
+	Future<SubscribeResult> subscribeToPlan({
+		required String planId,
+		required int months,
+		String? returnBaseUrl,
+	}) async {
+		final body = <String, dynamic>{'months': months};
+		if (returnBaseUrl != null) {
+			body['return_base_url'] = returnBaseUrl;
+		}
+		final json = await _api.postJson('/api/tariffs/$planId/subscribe', body: body);
+		return SubscribeResult.fromJson(json);
 	}
 
 	Future<MasterProfile> fetchProfile() async {

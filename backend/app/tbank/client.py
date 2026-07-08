@@ -19,6 +19,7 @@ class TBankClient:
 		description: str,
 		success_url: str,
 		fail_url: str,
+		notification_url: str | None = None,
 	) -> dict[str, Any]:
 		payload: dict[str, Any] = {
 			"TerminalKey": settings.tbank_terminal_key,
@@ -29,6 +30,8 @@ class TBankClient:
 			"FailURL": fail_url,
 			"Language": "ru",
 		}
+		if notification_url:
+			payload["NotificationURL"] = notification_url
 		payload["Token"] = generate_token(payload, settings.tbank_password)
 
 		response = await httpx.AsyncClient(timeout=30.0).post(

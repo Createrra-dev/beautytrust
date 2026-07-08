@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import models
+from app.services.subscription_service import ensure_tariff_plans
 
 
 def _now() -> datetime:
@@ -20,6 +21,8 @@ def _risk_level(rating: float) -> str:
 
 
 def seed_database(db: Session) -> None:
+	ensure_tariff_plans(db)
+
 	if db.scalar(select(models.Master).limit(1)):
 		return
 
@@ -31,7 +34,8 @@ def seed_database(db: Session) -> None:
 		clients_count=247,
 		prevented_no_shows=12,
 		protected_income=156000,
-		tariff_label="Мастер",
+		tariff_label="Бесплатно",
+		tariff_plan_id="free",
 	)
 	db.add(master)
 	db.flush()
