@@ -28,6 +28,10 @@ class ClientProfileService {
 		_profileCache[phoneDigits] = profile;
 	}
 
+	static void invalidateCache(String phoneDigits) {
+		_profileCache.remove(phoneDigits);
+	}
+
 	static ClientProfile _profileFromAppointment(AppointmentRecord appointment) {
 		final ratingLabel = _ratingLabel(appointment.clientRating);
 		final reviews = DemoMasterReviews.ekaterina;

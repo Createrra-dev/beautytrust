@@ -46,6 +46,7 @@ class AppointmentSchema(BaseModel):
 	service_price: int
 	client_rating: float
 	risk_level: str
+	status: str = "scheduled"
 	days_since_verified: int
 	visit_result: VisitResultSchema | None = None
 
@@ -71,6 +72,7 @@ class AppointmentUpdateRequest(BaseModel):
 	service_price: int | None = None
 	client_rating: float | None = None
 	risk_level: str | None = None
+	status: str | None = None
 	days_since_verified: int | None = None
 
 
@@ -125,6 +127,7 @@ class MasterProfileSchema(BaseModel):
 	email: str | None = None
 	phone_digits: str | None = None
 	years_experience: int = 0
+	onboarding_completed: bool = False
 
 
 class MasterProfileUpdateRequest(BaseModel):
@@ -254,3 +257,21 @@ class NotificationSchema(BaseModel):
 
 class AdminSupportReplyRequest(BaseModel):
 	text: str = Field(min_length=1, max_length=4000)
+
+
+class ClientReviewCreateRequest(BaseModel):
+	rating: float = Field(ge=1.0, le=5.0)
+	text: str = Field(min_length=3, max_length=2000)
+	client_name: str | None = None
+
+
+class ProfileStatsSchema(BaseModel):
+	appointments_total: int
+	appointments_scheduled: int
+	appointments_completed: int
+	appointments_no_show: int
+	appointments_cancelled: int
+	completion_rate: float
+	avg_client_rating: float
+	checks_total: int
+	reviews_given: int

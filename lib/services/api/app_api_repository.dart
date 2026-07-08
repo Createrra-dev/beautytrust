@@ -417,6 +417,10 @@ class AppApiRepository {
 		return _masterProfileFromJson(json);
 	}
 
+	Future<void> completeOnboarding() async {
+		await _api.postJson('/api/profile/onboarding/complete', body: {});
+	}
+
 	Future<MasterProfile> updateProfile({
 		String? firstName,
 		String? email,
@@ -492,6 +496,7 @@ class AppApiRepository {
 			clientRating: (json['client_rating'] as num).toDouble(),
 			riskLevel: _riskLevelFromApi(json['risk_level'] as String),
 			daysSinceVerified: json['days_since_verified'] as int,
+			status: _statusFromApi(json['status'] as String? ?? 'scheduled'),
 			visitResult: visitResult,
 		);
 	}
@@ -619,6 +624,15 @@ class AppApiRepository {
 			AppointmentRiskLevel.low => 'low',
 			AppointmentRiskLevel.medium => 'medium',
 			AppointmentRiskLevel.high => 'high',
+		};
+	}
+
+	AppointmentStatus _statusFromApi(String value) {
+		return switch (value) {
+			'completed' => AppointmentStatus.completed,
+			'no_show' => AppointmentStatus.noShow,
+			'cancelled' => AppointmentStatus.cancelled,
+			_ => AppointmentStatus.scheduled,
 		};
 	}
 

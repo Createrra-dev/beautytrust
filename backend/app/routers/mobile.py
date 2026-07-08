@@ -1,8 +1,11 @@
 from calendar import monthrange
 from datetime import datetime, timezone
+from io import StringIO
 from uuid import uuid4
+import csv
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import and_, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -17,6 +20,7 @@ from app.schemas.api import (
 	CheckHistoryRecordSchema,
 	ClientCheckResponse,
 	ClientProfileSchema,
+	ClientReviewCreateRequest,
 	CommunityMessageCreateRequest,
 	CommunityMessageSchema,
 	CommunityTopicCreateRequest,
@@ -32,10 +36,19 @@ from app.schemas.api import (
 	MasterServiceUpdateRequest,
 	NotificationSchema,
 	PhoneCheckRequest,
+	ProfileStatsSchema,
 	SupportMessageCreateRequest,
 	SupportTicketCreateRequest,
 	SupportTicketSchema,
 	VisitResultSchema,
+)
+from app.services.client_rating_service import (
+	add_client_review,
+	apply_visit_result_to_client,
+	days_since_last_check,
+	normalize_phone_digits,
+	risk_level_from_rating,
+	sync_appointment_client_fields,
 )
 from app.services.notification_service import notify_support_reply
 from app.services.password_service import normalize_email
@@ -135,6 +148,7 @@ def _appointment_schema(appointment: models.Appointment) -> AppointmentSchema:
 		service_price=appointment.service_price,
 		client_rating=appointment.client_rating,
 		risk_level=appointment.risk_level,
+		status=appointment.status,
 		days_since_verified=appointment.days_since_verified,
 		visit_result=visit_result,
 	)
@@ -192,11 +206,10 @@ def _previous_month(year: int, month: int) -> tuple[int, int]:
 
 
 def _risk_level_from_rating(rating: float) -> str:
-	if rating >= 4:
-		return "low"
-	if rating >= 3:
-		return "medium"
-	return "high"
+	return risk_level_from_rating(rating)
+
+
+_APPOINTMENT_STATUSES = {"scheduled", "completed", "no_show", "cancelled"}
 
 
 def _percent_trend_label(current: int, previous: int, compare_month: int) -> str:
@@ -232,8 +245,7 @@ def _dashboard_metrics(db: Session, master_id: int, year: int, month: int) -> tu
 	protected_income = 0
 	prevented_no_shows = 0
 	for appointment in appointments:
-		visit = appointment.visit_result
-		if visit is None or visit.punctuality == "noShow":
+		if appointment.status != "completed":
 			continue
 		protected_income += appointment.service_price
 		if appointment.risk_level == "high":
@@ -259,12 +271,11 @@ def _sparkline_values(db: Session, master_id: int, year: int, month: int) -> lis
 			extract("day", models.Appointment.scheduled_at).label("day"),
 			func.coalesce(func.sum(models.Appointment.service_price), 0).label("income"),
 		)
-		.join(models.VisitResult, models.VisitResult.appointment_id == models.Appointment.id)
 		.where(
 			models.Appointment.master_id == master_id,
 			models.Appointment.scheduled_at >= start,
 			models.Appointment.scheduled_at <= end,
-			models.VisitResult.punctuality != "noShow",
+			models.Appointment.status == "completed",
 		)
 		.group_by("day")
 	).all()
@@ -340,8 +351,7 @@ def _refresh_master_stats(db: Session, master: models.Master) -> None:
 	protected_income = 0
 	prevented_no_shows = 0
 	for appointment in appointments:
-		visit = appointment.visit_result
-		if visit is None or visit.punctuality == "noShow":
+		if appointment.status != "completed":
 			continue
 		protected_income += appointment.service_price
 		if appointment.risk_level == "high":
@@ -369,6 +379,7 @@ def _master_profile_schema(master: models.Master) -> MasterProfileSchema:
 		email=master.email,
 		phone_digits=master.phone_digits,
 		years_experience=_years_experience(master),
+		onboarding_completed=master.onboarding_completed,
 	)
 
 
@@ -496,6 +507,67 @@ async def delete_profile_avatar(
 	db.refresh(master)
 	_delete_avatar_file(previous)
 	return _master_profile_schema(master)
+
+
+@router.post("/profile/onboarding/complete", response_model=MasterProfileSchema)
+async def complete_onboarding(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterProfileSchema:
+	master.onboarding_completed = True
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+	return _master_profile_schema(master)
+
+
+@router.get("/profile/stats", response_model=ProfileStatsSchema)
+async def get_profile_stats(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> ProfileStatsSchema:
+	status_rows = db.execute(
+		select(models.Appointment.status, func.count())
+		.where(models.Appointment.master_id == master.id)
+		.group_by(models.Appointment.status)
+	).all()
+	status_counts = {status: int(count) for status, count in status_rows}
+
+	scheduled = status_counts.get("scheduled", 0)
+	completed = status_counts.get("completed", 0)
+	no_show = status_counts.get("no_show", 0)
+	cancelled = status_counts.get("cancelled", 0)
+	total = scheduled + completed + no_show + cancelled
+	finished = completed + no_show
+	completion_rate = round((completed / finished) * 100, 1) if finished > 0 else 0.0
+
+	avg_rating = db.scalar(
+		select(func.avg(models.Appointment.client_rating)).where(
+			models.Appointment.master_id == master.id,
+		)
+	)
+	checks_total = db.scalar(
+		select(func.count())
+		.select_from(models.CheckHistoryRecord)
+		.where(models.CheckHistoryRecord.master_id == master.id)
+	) or 0
+	reviews_given = db.scalar(
+		select(func.count())
+		.select_from(models.MasterReview)
+		.where(models.MasterReview.master_id == master.id)
+	) or 0
+
+	return ProfileStatsSchema(
+		appointments_total=total,
+		appointments_scheduled=scheduled,
+		appointments_completed=completed,
+		appointments_no_show=no_show,
+		appointments_cancelled=cancelled,
+		completion_rate=completion_rate,
+		avg_client_rating=round(float(avg_rating or 0), 1),
+		checks_total=int(checks_total),
+		reviews_given=int(reviews_given),
+	)
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsSchema)
@@ -743,8 +815,10 @@ async def create_appointment(
 		service_price=body.service_price,
 		client_rating=body.client_rating,
 		risk_level=body.risk_level,
+		status="scheduled",
 		days_since_verified=body.days_since_verified,
 	)
+	sync_appointment_client_fields(db, appointment)
 	db.add(appointment)
 	db.commit()
 	db.refresh(appointment)
@@ -759,9 +833,23 @@ async def update_appointment(
 	master: models.Master = Depends(get_current_master),
 ) -> AppointmentSchema:
 	appointment = _get_master_appointment(db, master.id, appointment_id)
+	phone_changed = False
 
 	for field, value in body.model_dump(exclude_unset=True).items():
+		if field == "status":
+			if value not in _APPOINTMENT_STATUSES:
+				raise HTTPException(status_code=400, detail="Invalid appointment status")
+			if appointment.visit_result is not None and value in {"scheduled", "cancelled"}:
+				raise HTTPException(
+					status_code=400,
+					detail="Cannot change status after visit result is saved",
+				)
+		if field == "client_phone_digits" and value != appointment.client_phone_digits:
+			phone_changed = True
 		setattr(appointment, field, value)
+
+	if phone_changed or body.client_phone_digits is not None:
+		sync_appointment_client_fields(db, appointment)
 
 	db.commit()
 	db.refresh(appointment)
@@ -799,14 +887,18 @@ async def save_visit_result(
 		visit_result.left_tips = body.left_tips
 		visit_result.comment = body.comment
 	else:
-		appointment.visit_result = models.VisitResult(
+		visit_result = models.VisitResult(
 			punctuality=body.punctuality,
 			paid_in_full=body.paid_in_full,
 			had_scandal=body.had_scandal,
 			left_tips=body.left_tips,
 			comment=body.comment,
 		)
+		appointment.visit_result = visit_result
 
+	db.flush()
+	apply_visit_result_to_client(db, appointment, visit_result, master)
+	_refresh_master_stats(db, master)
 	db.commit()
 	db.refresh(appointment)
 	return _appointment_schema(appointment)
@@ -837,6 +929,7 @@ async def check_client(
 		raise HTTPException(status_code=404, detail="Client not found")
 
 	now = datetime.now(timezone.utc)
+	days_since = days_since_last_check(db, digits)
 	db.add(
 		models.CheckHistoryRecord(
 			external_id=f"check-{int(now.timestamp() * 1000)}",
@@ -848,11 +941,147 @@ async def check_client(
 			checked_at=now,
 		)
 	)
+
+	for appointment in db.scalars(
+		select(models.Appointment).where(
+			models.Appointment.master_id == master.id,
+			models.Appointment.client_phone_digits == digits,
+			models.Appointment.status == "scheduled",
+		)
+	).all():
+		appointment.days_since_verified = days_since
+		appointment.client_rating = profile.reviews_average
+		appointment.risk_level = _risk_level_from_rating(profile.reviews_average)
+		db.add(appointment)
+
 	db.commit()
 
 	return ClientCheckResponse(
 		client_name=profile.client_name,
 		profile=_profile_schema(profile),
+	)
+
+
+@router.post("/clients/{phone}/reviews", response_model=ClientProfileSchema)
+async def create_client_review(
+	phone: str,
+	body: ClientReviewCreateRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> ClientProfileSchema:
+	try:
+		digits = normalize_phone_digits(phone)
+	except ValueError as error:
+		raise HTTPException(status_code=400, detail=str(error)) from error
+
+	profile = db.scalar(
+		select(models.ClientProfile).where(models.ClientProfile.phone_digits == digits)
+	)
+	client_name = body.client_name or (profile.client_name if profile else "Клиент")
+
+	profile = add_client_review(
+		db,
+		digits,
+		client_name,
+		master,
+		body.rating,
+		body.text,
+	)
+	db.commit()
+	db.refresh(profile)
+
+	for appointment in db.scalars(
+		select(models.Appointment).where(
+			models.Appointment.master_id == master.id,
+			models.Appointment.client_phone_digits == digits,
+		)
+	).all():
+		appointment.client_rating = profile.reviews_average
+		appointment.risk_level = _risk_level_from_rating(profile.reviews_average)
+		db.add(appointment)
+	db.commit()
+
+	profile = db.scalar(
+		select(models.ClientProfile)
+		.options(joinedload(models.ClientProfile.reviews))
+		.where(models.ClientProfile.id == profile.id)
+	)
+	if profile is None:
+		raise HTTPException(status_code=404, detail="Client not found")
+	return _profile_schema(profile)
+
+
+@router.get("/reports/appointments")
+async def export_appointments_report(
+	format: str = Query(default="csv"),
+	from_: datetime | None = Query(default=None, alias="from"),
+	to: datetime | None = Query(default=None),
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+):
+	if format != "csv":
+		raise HTTPException(status_code=400, detail="Only csv format is supported")
+
+	filters = [models.Appointment.master_id == master.id]
+	if from_ is not None:
+		filters.append(models.Appointment.scheduled_at >= from_)
+	if to is not None:
+		filters.append(models.Appointment.scheduled_at <= to)
+
+	appointments = db.scalars(
+		select(models.Appointment)
+		.options(joinedload(models.Appointment.visit_result))
+		.where(and_(*filters))
+		.order_by(models.Appointment.scheduled_at)
+	).unique().all()
+
+	buffer = StringIO()
+	writer = csv.writer(buffer)
+	writer.writerow(
+		[
+			"id",
+			"client_name",
+			"client_phone",
+			"service_name",
+			"scheduled_at",
+			"service_price",
+			"status",
+			"client_rating",
+			"risk_level",
+			"days_since_verified",
+			"visit_punctuality",
+			"visit_paid_in_full",
+			"visit_had_scandal",
+			"visit_left_tips",
+		]
+	)
+	for item in appointments:
+		visit = item.visit_result
+		writer.writerow(
+			[
+				item.external_id,
+				item.client_name,
+				item.client_phone_digits,
+				item.service_name,
+				item.scheduled_at.isoformat(),
+				item.service_price,
+				item.status,
+				item.client_rating,
+				item.risk_level,
+				item.days_since_verified,
+				visit.punctuality if visit else "",
+				visit.paid_in_full if visit else "",
+				visit.had_scandal if visit else "",
+				visit.left_tips if visit else "",
+			]
+		)
+
+	buffer.seek(0)
+	filename = f"appointments-{master.id}-{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+	return StreamingResponse(
+		iter([buffer.getvalue()]),
+		media_type="text/csv; charset=utf-8",
+		headers={"Content-Disposition": f'attachment; filename="{filename}"'},
 	)
 
 

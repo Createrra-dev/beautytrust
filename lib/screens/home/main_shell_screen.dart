@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:motion_tab_bar/MotionTabBarController.dart';
 
 import '../../navigation/main_shell_navigation.dart';
+import '../../services/api/app_api_repository.dart';
+import '../../services/onboarding_storage.dart';
 import '../../widgets/brand_background.dart';
 import '../../widgets/home/app_bottom_navigation.dart';
 import '../community/community_tab_navigator.dart';
@@ -30,6 +32,20 @@ class _MainShellScreenState extends State<MainShellScreen>
 			vsync: this,
 		);
 		MainShellNavigation.instance.register(_selectTab);
+		_syncOnboarding();
+	}
+
+	Future<void> _syncOnboarding() async {
+		final completed = await OnboardingStorage.isCompleted();
+		if (!completed) {
+			return;
+		}
+
+		try {
+			await AppApiRepository().completeOnboarding();
+		} catch (_) {
+			// Offline or unauthenticated — local flag is enough for UX.
+		}
 	}
 
 	void _selectTab(int index) {

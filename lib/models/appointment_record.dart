@@ -9,6 +9,13 @@ enum AppointmentRiskLevel {
 	high,
 }
 
+enum AppointmentStatus {
+	scheduled,
+	completed,
+	noShow,
+	cancelled,
+}
+
 class AppointmentRecord {
 	AppointmentRecord({
 		required this.id,
@@ -21,6 +28,7 @@ class AppointmentRecord {
 		required this.clientRating,
 		required this.riskLevel,
 		required this.daysSinceVerified,
+		this.status = AppointmentStatus.scheduled,
 		this.visitResult,
 	});
 
@@ -34,6 +42,7 @@ class AppointmentRecord {
 	final double clientRating;
 	final AppointmentRiskLevel riskLevel;
 	final int daysSinceVerified;
+	final AppointmentStatus status;
 	final VisitResult? visitResult;
 
 	String get dateLabel => formatAppointmentDateLabel(scheduledAt);
@@ -58,6 +67,7 @@ class AppointmentRecord {
 		double? clientRating,
 		AppointmentRiskLevel? riskLevel,
 		int? daysSinceVerified,
+		AppointmentStatus? status,
 		VisitResult? visitResult,
 	}) {
 		return AppointmentRecord(
@@ -71,8 +81,18 @@ class AppointmentRecord {
 			clientRating: clientRating ?? this.clientRating,
 			riskLevel: riskLevel ?? this.riskLevel,
 			daysSinceVerified: daysSinceVerified ?? this.daysSinceVerified,
+			status: status ?? this.status,
 			visitResult: visitResult ?? this.visitResult,
 		);
+	}
+
+	String get statusLabel {
+		return switch (status) {
+			AppointmentStatus.scheduled => 'Запланирована',
+			AppointmentStatus.completed => 'Завершена',
+			AppointmentStatus.noShow => 'Неявка',
+			AppointmentStatus.cancelled => 'Отменена',
+		};
 	}
 
 	String get riskLabel {

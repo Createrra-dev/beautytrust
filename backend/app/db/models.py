@@ -25,6 +25,7 @@ class Master(Base):
 	)
 	tariff_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	avatar_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+	onboarding_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)
 	email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
 	password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -66,6 +67,8 @@ class MasterReview(Base):
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True)
 	client_profile_id: Mapped[int] = mapped_column(ForeignKey("client_profiles.id"), index=True)
+	master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True, index=True)
+	appointment_id: Mapped[int | None] = mapped_column(ForeignKey("appointments.id"), nullable=True, unique=True, index=True)
 	author_name: Mapped[str] = mapped_column(String(120), nullable=False)
 	rating: Mapped[float] = mapped_column(Float, nullable=False)
 	text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -89,6 +92,7 @@ class Appointment(Base):
 	service_price: Mapped[int] = mapped_column(Integer, nullable=False)
 	client_rating: Mapped[float] = mapped_column(Float, nullable=False)
 	risk_level: Mapped[str] = mapped_column(String(20), nullable=False)
+	status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled")
 	days_since_verified: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

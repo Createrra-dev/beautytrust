@@ -6,6 +6,7 @@ import '../models/dashboard_stats.dart';
 import '../models/visit_result.dart';
 import 'api/app_api_repository.dart';
 import 'api/beauty_trust_api.dart';
+import 'client_profile_service.dart';
 
 class DashboardDataService extends ChangeNotifier {
 	DashboardDataService._();
@@ -94,6 +95,7 @@ class DashboardDataService extends ChangeNotifier {
 
 	static Future<void> saveVisitResult(String appointmentId, VisitResult visitResult) async {
 		final updated = await _api.saveVisitResult(appointmentId, visitResult);
+		ClientProfileService.invalidateCache(updated.clientPhoneDigits);
 		final appointmentIndex = instance._appointments.indexWhere(
 			(appointment) => appointment.id == appointmentId,
 		);
@@ -108,6 +110,7 @@ class DashboardDataService extends ChangeNotifier {
 
 	static Future<void> updateAppointment(AppointmentRecord appointment) async {
 		final updated = await _api.updateAppointment(appointment);
+		ClientProfileService.invalidateCache(updated.clientPhoneDigits);
 		final appointmentIndex = instance._appointments.indexWhere(
 			(item) => item.id == appointment.id,
 		);
