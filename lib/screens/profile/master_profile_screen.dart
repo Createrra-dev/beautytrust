@@ -15,6 +15,7 @@ import '../../widgets/profile/profile_menu_item.dart';
 import '../auth/phone_login_screen.dart';
 import '../support/support_tickets_screen.dart';
 import 'edit_profile_screen.dart';
+import 'master_services_screen.dart';
 import 'tariffs_screen.dart';
 
 class MasterProfileScreen extends StatefulWidget {
@@ -186,6 +187,11 @@ class _MasterProfileScreenState extends State<MasterProfileScreen> {
 
 		if (item == MasterProfileMenuItem.tariff) {
 			Navigator.of(context).pushNamed(TariffsScreen.routeName);
+			return;
+		}
+
+		if (item == MasterProfileMenuItem.services) {
+			Navigator.of(context).pushNamed(MasterServicesScreen.routeName);
 			return;
 		}
 
@@ -494,6 +500,12 @@ class _ProfileMenuCard extends StatelessWidget {
 			),
 			child: Column(
 				children: [
+					ProfileMenuItem(
+						icon: Icons.spa_outlined,
+						title: MasterProfileMenuItem.services.title,
+						onTap: () => onItemTap(MasterProfileMenuItem.services),
+					),
+					const Divider(color: AppColors.border, height: 1),
 					ProfileMenuItem(
 						icon: Icons.bar_chart_rounded,
 						title: MasterProfileMenuItem.statistics.title,

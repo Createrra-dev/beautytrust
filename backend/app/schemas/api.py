@@ -79,6 +79,7 @@ class MasterServiceSchema(BaseModel):
 	name: str
 	duration_label: str
 	price: int
+	is_owned: bool = False
 
 
 class MasterServiceCreateRequest(BaseModel):

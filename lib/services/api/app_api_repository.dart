@@ -162,13 +162,55 @@ class AppApiRepository {
 		final items = await _api.getJsonList('/api/master/services');
 		return items.map((item) {
 			final json = item as Map<String, dynamic>;
-			return MasterService(
-				id: json['id'] as int?,
-				name: json['name'] as String,
-				durationLabel: json['duration_label'] as String,
-				price: json['price'] as int,
-			);
+			return _masterServiceFromJson(json);
 		}).toList();
+	}
+
+	Future<MasterService> createMasterService({
+		required String name,
+		required String durationLabel,
+		required int price,
+	}) async {
+		final json = await _api.postJson(
+			'/api/master/services',
+			body: {
+				'name': name,
+				'duration_label': durationLabel,
+				'price': price,
+			},
+		);
+		return _masterServiceFromJson(json);
+	}
+
+	Future<MasterService> updateMasterService({
+		required int serviceId,
+		required String name,
+		required String durationLabel,
+		required int price,
+	}) async {
+		final json = await _api.patchJson(
+			'/api/master/services/$serviceId',
+			body: {
+				'name': name,
+				'duration_label': durationLabel,
+				'price': price,
+			},
+		);
+		return _masterServiceFromJson(json);
+	}
+
+	Future<void> deleteMasterService(int serviceId) async {
+		await _api.deleteJson('/api/master/services/$serviceId');
+	}
+
+	MasterService _masterServiceFromJson(Map<String, dynamic> json) {
+		return MasterService(
+			id: json['id'] as int?,
+			name: json['name'] as String,
+			durationLabel: json['duration_label'] as String,
+			price: json['price'] as int,
+			isOwned: json['is_owned'] as bool? ?? false,
+		);
 	}
 
 	Future<List<CommunityTopic>> fetchCommunityTopics({String query = ''}) async {

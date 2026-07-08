@@ -590,6 +590,7 @@ async def list_services(
 			name=service.name,
 			duration_label=service.duration_label,
 			price=service.price,
+			is_owned=service.master_id == master.id,
 		)
 		for service in services
 	]
@@ -601,10 +602,19 @@ async def create_service(
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> MasterServiceSchema:
+	name = body.name.strip()
+	duration_label = body.duration_label.strip()
+	if len(name) < 2:
+		raise HTTPException(status_code=400, detail="Название слишком короткое")
+	if not duration_label:
+		raise HTTPException(status_code=400, detail="Укажите длительность")
+	if body.price < 0:
+		raise HTTPException(status_code=400, detail="Цена не может быть отрицательной")
+
 	service = models.MasterService(
 		master_id=master.id,
-		name=body.name.strip(),
-		duration_label=body.duration_label.strip(),
+		name=name,
+		duration_label=duration_label,
 		price=body.price,
 	)
 	db.add(service)
@@ -615,6 +625,7 @@ async def create_service(
 		name=service.name,
 		duration_label=service.duration_label,
 		price=service.price,
+		is_owned=True,
 	)
 
 
@@ -628,9 +639,18 @@ async def update_service(
 	service = _get_master_service(db, master.id, service_id)
 	payload = body.model_dump(exclude_unset=True)
 	if "name" in payload and payload["name"] is not None:
-		payload["name"] = payload["name"].strip()
+		name = payload["name"].strip()
+		if len(name) < 2:
+			raise HTTPException(status_code=400, detail="Название слишком короткое")
+		payload["name"] = name
 	if "duration_label" in payload and payload["duration_label"] is not None:
-		payload["duration_label"] = payload["duration_label"].strip()
+		duration_label = payload["duration_label"].strip()
+		if not duration_label:
+			raise HTTPException(status_code=400, detail="Укажите длительность")
+		payload["duration_label"] = duration_label
+	if "price" in payload and payload["price"] is not None and payload["price"] < 0:
+		raise HTTPException(status_code=400, detail="Цена не может быть отрицательной")
+
 	for field, value in payload.items():
 		setattr(service, field, value)
 	# Claim legacy global services when edited by a master.
@@ -643,6 +663,7 @@ async def update_service(
 		name=service.name,
 		duration_label=service.duration_label,
 		price=service.price,
+		is_owned=service.master_id == master.id,
 	)
 
 

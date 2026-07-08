@@ -61,6 +61,7 @@ class MasterProfile {
 }
 
 enum MasterProfileMenuItem {
+	services,
 	statistics,
 	reviews,
 	tariff,
@@ -72,6 +73,7 @@ enum MasterProfileMenuItem {
 extension MasterProfileMenuItemX on MasterProfileMenuItem {
 	String get title {
 		return switch (this) {
+			MasterProfileMenuItem.services => 'Услуги',
 			MasterProfileMenuItem.statistics => 'Статистика',
 			MasterProfileMenuItem.reviews => 'Отзывы',
 			MasterProfileMenuItem.tariff => 'Тариф',
