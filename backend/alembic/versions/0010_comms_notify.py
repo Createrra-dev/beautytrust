@@ -1,6 +1,6 @@
 """Community read/close, devices, notifications, support attachments
 
-Revision ID: 0010_community_support_notifications
+Revision ID: 0010_comms_notify
 Revises: 0009_tariff_subscriptions
 Create Date: 2026-07-08
 """
@@ -8,7 +8,7 @@ Create Date: 2026-07-08
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0010_community_support_notifications"
+revision = "0010_comms_notify"
 down_revision = "0009_tariff_subscriptions"
 branch_labels = None
 depends_on = None
