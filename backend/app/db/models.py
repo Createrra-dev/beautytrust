@@ -223,6 +223,22 @@ class AppNotification(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class AuditLog(Base):
+	__tablename__ = "audit_logs"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True, index=True)
+	method: Mapped[str] = mapped_column(String(10), nullable=False)
+	path: Mapped[str] = mapped_column(String(500), nullable=False)
+	status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+	entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+	entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+	details_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+	ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+	request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
 class OtpSession(Base):
 	__tablename__ = "otp_sessions"
 

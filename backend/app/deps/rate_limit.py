@@ -1,3 +1,4 @@
+import json
 import time
 from collections import defaultdict, deque
 from threading import Lock
@@ -5,6 +6,7 @@ from threading import Lock
 from fastapi import Request
 
 from app.core.errors import ApiError
+from app.services.cache_service import _get_redis
 
 
 class InMemoryRateLimiter:
@@ -37,8 +39,26 @@ def _client_key(request: Request, scope: str) -> str:
 	return f"{scope}:{client_host}"
 
 
+def _redis_hit(key: str, *, limit: int, window_seconds: int) -> tuple[bool, int]:
+	client = _get_redis()
+	if client is None:
+		return rate_limiter.hit(key, limit=limit, window_seconds=window_seconds)
+
+	redis_key = f"rate:{key}"
+	try:
+		current = client.incr(redis_key)
+		if current == 1:
+			client.expire(redis_key, window_seconds)
+		if current > limit:
+			ttl = client.ttl(redis_key)
+			return False, max(1, int(ttl))
+		return True, 0
+	except Exception:
+		return rate_limiter.hit(key, limit=limit, window_seconds=window_seconds)
+
+
 async def rate_limit_auth(request: Request) -> None:
-	allowed, retry_after = rate_limiter.hit(
+	allowed, retry_after = _redis_hit(
 		_client_key(request, "auth"),
 		limit=20,
 		window_seconds=60,
@@ -53,7 +73,7 @@ async def rate_limit_auth(request: Request) -> None:
 
 
 async def rate_limit_client_check(request: Request) -> None:
-	allowed, retry_after = rate_limiter.hit(
+	allowed, retry_after = _redis_hit(
 		_client_key(request, "client_check"),
 		limit=30,
 		window_seconds=60,

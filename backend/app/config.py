@@ -26,6 +26,13 @@ class Settings(BaseSettings):
 	zvonok_public_key: str = ""
 	zvonok_campaign_id: str = ""
 	zvonok_api_base_url: str = "https://zvonok.com"
+	redis_url: str = ""
+	sentry_dsn: str = ""
+	sentry_traces_sample_rate: float = 0.1
+	metrics_token: str = ""
+	force_https: bool = False
+	app_env: str = "development"
+	app_version: str = "2.0.0"
 
 	@property
 	def tbank_configured(self) -> bool:

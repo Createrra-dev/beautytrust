@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: beautytrust
+          POSTGRES_USER: beautytrust
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U beautytrust -d beautytrust"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg2://beautytrust:test@127.0.0.1:5432/beautytrust
+        run: alembic upgrade head
+
+      - name: Run pytest
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg2://beautytrust:test@127.0.0.1:5432/beautytrust
+          AUTH_JWT_SECRET: test-secret
+        run: pytest -q
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter analyze
+        run: flutter analyze
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [backend, flutter]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rsync and sshpass
+        run: sudo apt-get update && sudo apt-get install -y rsync sshpass
+
+      - name: Sync project to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          SSHPASS="$SSH_PASSWORD" sshpass -e rsync -az \
+            --exclude '.git' \
+            --exclude 'backend/.env' \
+            --exclude 'deploy/.env' \
+            --exclude 'backend/data/' \
+            --exclude 'build/' \
+            --exclude '.dart_tool/' \
+            ./ "${SSH_USER}@${SSH_HOST}:/opt/beautytrust/"
+
+      - name: Rebuild and restart services
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          SSHPASS="$SSH_PASSWORD" sshpass -e ssh -o StrictHostKeyChecking=no \
+            "${SSH_USER}@${SSH_HOST}" \
+            'cd /opt/beautytrust/deploy && docker compose up -d --build api redis nginx && bash scripts/install-cron.sh && docker compose ps'

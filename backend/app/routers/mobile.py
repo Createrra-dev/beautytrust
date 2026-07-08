@@ -50,6 +50,7 @@ from app.services.client_rating_service import (
 	risk_level_from_rating,
 	sync_appointment_client_fields,
 )
+from app.services.cache_service import cache_delete_prefix, cache_get_json, cache_set_json
 from app.services.notification_service import notify_support_reply
 from app.services.password_service import normalize_email
 from app.services.uploads import avatar_url_for, uploads_root
@@ -203,6 +204,10 @@ def _previous_month(year: int, month: int) -> tuple[int, int]:
 	if month == 1:
 		return year - 1, 12
 	return year, month - 1
+
+
+def _invalidate_dashboard_cache(master_id: int) -> None:
+	cache_delete_prefix(f"dashboard:stats:{master_id}:")
 
 
 def _risk_level_from_rating(rating: float) -> str:
@@ -580,6 +585,11 @@ async def get_dashboard_stats(
 	if year < 2000 or year > 2100:
 		raise HTTPException(status_code=400, detail="Invalid year")
 
+	cache_key = f"dashboard:stats:{master.id}:{year}:{month}"
+	cached = cache_get_json(cache_key)
+	if cached is not None:
+		return DashboardStatsSchema(**cached)
+
 	protected_income, prevented_no_shows, completed_checks = _dashboard_metrics(
 		db, master.id, year, month
 	)
@@ -588,7 +598,7 @@ async def get_dashboard_stats(
 		db, master.id, prev_year, prev_month
 	)
 
-	return DashboardStatsSchema(
+	result = DashboardStatsSchema(
 		period_label=_period_label(year, month),
 		protected_income=protected_income,
 		income_trend_label=_percent_trend_label(protected_income, prev_income, prev_month),
@@ -599,6 +609,8 @@ async def get_dashboard_stats(
 		completed_checks=completed_checks,
 		checks_trend_label=_count_trend_label(completed_checks, prev_checks, prev_month),
 	)
+	cache_set_json(cache_key, result.model_dump(), 60)
+	return result
 
 
 @router.get("/dashboard/periods", response_model=list[DashboardPeriodSchema])
@@ -822,6 +834,7 @@ async def create_appointment(
 	db.add(appointment)
 	db.commit()
 	db.refresh(appointment)
+	_invalidate_dashboard_cache(master.id)
 	return _appointment_schema(appointment)
 
 
@@ -853,6 +866,7 @@ async def update_appointment(
 
 	db.commit()
 	db.refresh(appointment)
+	_invalidate_dashboard_cache(master.id)
 	return _appointment_schema(appointment)
 
 
@@ -867,6 +881,7 @@ async def delete_appointment(
 		db.delete(appointment.visit_result)
 	db.delete(appointment)
 	db.commit()
+	_invalidate_dashboard_cache(master.id)
 	return {"ok": True}
 
 
@@ -901,6 +916,7 @@ async def save_visit_result(
 	_refresh_master_stats(db, master)
 	db.commit()
 	db.refresh(appointment)
+	_invalidate_dashboard_cache(master.id)
 	return _appointment_schema(appointment)
 
 

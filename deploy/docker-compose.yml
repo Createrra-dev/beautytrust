@@ -25,13 +25,27 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+psycopg2://beautytrust:${POSTGRES_PASSWORD:-beautytrust_prod_change_me}@127.0.0.1:5432/beautytrust
+      REDIS_URL: redis://127.0.0.1:6379/0
       PUBLIC_BASE_URL: https://apis.beautytrust.ru
       UPLOADS_DIR: /app/data/uploads
+      FORCE_HTTPS: "true"
+      APP_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - api_data:/app/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
 
   nginx:
     image: nginx:1.27-alpine
@@ -60,5 +74,6 @@ services:
 volumes:
   postgres_data:
   api_data:
+  redis_data:
   certbot_www:
   certbot_conf:

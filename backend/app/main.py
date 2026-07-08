@@ -2,12 +2,13 @@ from contextlib import asynccontextmanager
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from fastapi import HTTPException
 
 from app.config import settings
 from app.core.errors import (
@@ -21,7 +22,10 @@ from app.core.errors import (
 from app.db.base import Base
 from app.db.seed import seed_database
 from app.db.session import SessionLocal, engine
+from app.middleware.audit_log import AuditLogMiddleware
+from app.middleware.https_redirect import HttpsRedirectMiddleware
 from app.middleware.request_logging import RequestLoggingMiddleware
+from app.monitoring import setup_monitoring
 from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
 from app.routers.mobile import router as mobile_router
@@ -33,6 +37,8 @@ logging.basicConfig(
 	level=logging.INFO,
 	format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
 )
+
+setup_monitoring()
 
 
 @asynccontextmanager
@@ -56,6 +62,8 @@ app = FastAPI(
 	lifespan=lifespan,
 )
 
+app.add_middleware(HttpsRedirectMiddleware)
+app.add_middleware(AuditLogMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
 	CORSMiddleware,
@@ -83,6 +91,15 @@ if not uploads_dir.is_absolute():
 	uploads_dir = Path(__file__).resolve().parents[1] / uploads_dir
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
+
+@app.get("/metrics")
+async def metrics(x_metrics_token: str | None = Header(default=None, alias="X-Metrics-Token")) -> Response:
+	expected = settings.metrics_token or settings.admin_token
+	if expected and x_metrics_token != expected:
+		raise HTTPException(status_code=401, detail="Unauthorized")
+
+	return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/")
