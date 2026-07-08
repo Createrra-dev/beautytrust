@@ -100,6 +100,14 @@ String extractPhoneDigits(String value) {
 	return value.replaceAll(RegExp(r'\D'), '');
 }
 
+String normalizePhoneDigits(String value) {
+	var digits = extractPhoneDigits(value);
+	if (digits.length == 11 && (digits.startsWith('7') || digits.startsWith('8'))) {
+		digits = digits.substring(1);
+	}
+	return digits;
+}
+
 bool isPhoneComplete(String value) {
-	return extractPhoneDigits(value).length == 10;
+	return normalizePhoneDigits(value).length == 10;
 }

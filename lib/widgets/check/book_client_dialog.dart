@@ -5,6 +5,7 @@ import '../../models/appointment_record.dart';
 import '../../models/client_check_result.dart';
 import '../../models/master_service.dart';
 import '../../services/dashboard_data_service.dart';
+import '../../services/api/beauty_trust_api.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_formatter.dart';
 
@@ -37,6 +38,7 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 	List<MasterService> _services = [];
 	String? _errorText;
 	var _isLoadingServices = true;
+	var _isSubmitting = false;
 
 	@override
 	void initState() {
@@ -117,6 +119,12 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 			return;
 		}
 
+		final phoneDigits = normalizePhoneDigits(widget.checkResult.profile.phone);
+		if (phoneDigits.length != 10) {
+			setState(() => _errorText = 'Некорректный номер телефона клиента');
+			return;
+		}
+
 		final appointmentDate = DateTime(
 			_selectedDate.year,
 			_selectedDate.month,
@@ -128,24 +136,49 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 		final profile = widget.checkResult.profile;
 		final rating = profile.reviewsAverage;
 
-		final phoneDigits = extractPhoneDigits(profile.phone);
+		setState(() {
+			_errorText = null;
+			_isSubmitting = true;
+		});
 
-		await DashboardDataService.addAppointment(
-			AppointmentRecord(
-				id: 'pending',
-				clientName: clientName,
-				clientPhoneDigits: phoneDigits,
-				serviceName: service.name,
-				serviceDurationLabel: service.durationLabel,
-				scheduledAt: appointmentDate,
-				servicePrice: service.price,
-				clientRating: rating,
-				riskLevel: appointmentRiskLevelForRating(rating),
-				daysSinceVerified: 0,
-			),
-		);
+		try {
+			await DashboardDataService.addAppointment(
+				AppointmentRecord(
+					id: 'pending',
+					clientName: clientName,
+					clientPhoneDigits: phoneDigits,
+					serviceName: service.name,
+					serviceDurationLabel: service.durationLabel,
+					scheduledAt: appointmentDate,
+					servicePrice: service.price,
+					clientRating: rating,
+					riskLevel: appointmentRiskLevelForRating(rating),
+					daysSinceVerified: 0,
+				),
+			);
 
-		Navigator.of(context).pop(true);
+			if (!mounted) {
+				return;
+			}
+
+			Navigator.of(context).pop(true);
+		} on ApiException catch (error) {
+			if (!mounted) {
+				return;
+			}
+			setState(() {
+				_errorText = error.message;
+				_isSubmitting = false;
+			});
+		} catch (error) {
+			if (!mounted) {
+				return;
+			}
+			setState(() {
+				_errorText = 'Не удалось создать запись';
+				_isSubmitting = false;
+			});
+		}
 	}
 
 	@override
@@ -241,8 +274,14 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 					child: const Text('Отмена'),
 				),
 				FilledButton(
-					onPressed: _bookClient,
-					child: const Text('Записать'),
+					onPressed: _isSubmitting ? null : _bookClient,
+					child: _isSubmitting
+						? const SizedBox(
+							width: 18,
+							height: 18,
+							child: CircularProgressIndicator(strokeWidth: 2),
+						)
+						: const Text('Записать'),
 				),
 			],
 		);

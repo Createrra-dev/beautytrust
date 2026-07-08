@@ -871,12 +871,17 @@ async def create_appointment(
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> AppointmentSchema:
+	try:
+		phone_digits = normalize_phone_digits(body.client_phone_digits)
+	except ValueError as error:
+		raise HTTPException(status_code=400, detail=str(error)) from error
+
 	external_id = f"appointment-{int(datetime.now(timezone.utc).timestamp())}"
 	appointment = models.Appointment(
 		external_id=external_id,
 		master_id=master.id,
 		client_name=body.client_name,
-		client_phone_digits=body.client_phone_digits,
+		client_phone_digits=phone_digits,
 		service_name=body.service_name,
 		service_duration_label=body.service_duration_label,
 		scheduled_at=body.scheduled_at,
