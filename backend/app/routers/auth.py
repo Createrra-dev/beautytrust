@@ -24,10 +24,25 @@ from app.services.auth_service import (
 	verify_otp_code,
 	verify_otp_code_by_phone,
 )
-from app.services.zvonok_service import OTP_CHANNEL_FLASH_CALL, ZvonokError, get_flash_call_status
+from app.services.zvonok_service import (
+	OTP_CHANNEL_FLASH_CALL,
+	ZVONOK_STATUS_IN_PROCESS,
+	ZvonokError,
+	get_flash_call_status,
+)
 from app.services.telegram_webhook import handle_telegram_update
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _flash_call_status_display(status: str | None, dial_status_display: str | None) -> str:
+	if status == ZVONOK_STATUS_IN_PROCESS:
+		return "Звоним на ваш номер..."
+	if status == "compl_finished":
+		return "Введите последние 4 цифры номера звонящего"
+	if dial_status_display:
+		return dial_status_display
+	return "Ожидаем звонок..."
 
 
 @router.post("/phone/check", response_model=PhoneCheckResponse)
@@ -107,16 +122,24 @@ async def get_otp_call_status(
 			session_id=session.session_token,
 			channel=session.delivery_channel,
 			call_id=session.zvonok_call_id,
+			call_status=ZVONOK_STATUS_IN_PROCESS,
+			call_status_display="Ожидаем звонок...",
+			completed=False,
 		)
+
+	status_display = _flash_call_status_display(
+		call_status.status,
+		call_status.dial_status_display or call_status.status_display,
+	)
 
 	return OtpCallStatusResponse(
 		session_id=session.session_token,
 		channel=session.delivery_channel,
 		call_id=call_status.call_id,
 		call_status=call_status.status,
-		call_status_display=call_status.status_display,
+		call_status_display=status_display,
 		dial_status_display=call_status.dial_status_display,
-		completed=call_status.completed,
+		completed=False,
 	)
 
 

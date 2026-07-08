@@ -51,7 +51,7 @@ class _OtpCodeScreenState extends State<OtpCodeScreen> {
 	String? _botUrl;
 	String? _errorText;
 	String? _callStatusText;
-	var _callCompleted = false;
+	int? _expectedCallId;
 	Timer? _timer;
 	Timer? _callStatusTimer;
 
@@ -86,7 +86,7 @@ class _OtpCodeScreenState extends State<OtpCodeScreen> {
 			_errorText = null;
 			_digits.clear();
 			_callStatusText = null;
-			_callCompleted = false;
+			_expectedCallId = null;
 		});
 
 		_callStatusTimer?.cancel();
@@ -163,14 +163,25 @@ class _OtpCodeScreenState extends State<OtpCodeScreen> {
 				return;
 			}
 
-			setState(() {
-				_callStatusText = status.callStatusDisplay ?? status.dialStatusDisplay;
-				_callCompleted = status.completed;
-			});
-
-			if (status.completed) {
-				_callStatusTimer?.cancel();
+			final callId = status.callId;
+			if (callId != null &&
+				_expectedCallId != null &&
+				callId != _expectedCallId) {
+				return;
 			}
+
+			if (callId != null) {
+				_expectedCallId ??= callId;
+			}
+
+			final statusText = status.callStatusDisplay ?? status.dialStatusDisplay;
+			if (statusText == null || statusText.isEmpty) {
+				return;
+			}
+
+			setState(() {
+				_callStatusText = statusText;
+			});
 		} on ApiException {
 			return;
 		}
@@ -411,26 +422,20 @@ class _OtpCodeScreenState extends State<OtpCodeScreen> {
 							child: Row(
 								mainAxisAlignment: MainAxisAlignment.center,
 								children: [
-									Icon(
-										_callCompleted
-											? Icons.check_circle_outline_rounded
-											: Icons.phone_in_talk_outlined,
+									const Icon(
+										Icons.phone_in_talk_outlined,
 										size: 18,
-										color: _callCompleted
-											? AppColors.secondary
-											: AppColors.primary,
+										color: AppColors.primary,
 									),
 									const SizedBox(width: 8),
 									Flexible(
 										child: Text(
 											_callStatusText!,
 											textAlign: TextAlign.center,
-											style: TextStyle(
+											style: const TextStyle(
 												fontSize: 14,
 												fontWeight: FontWeight.w600,
-												color: _callCompleted
-													? AppColors.secondary
-													: AppColors.primary,
+												color: AppColors.primary,
 											),
 										),
 									),

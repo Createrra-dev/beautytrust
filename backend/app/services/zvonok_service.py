@@ -142,5 +142,6 @@ async def get_flash_call_status(
 		for call in calls:
 			if call.call_id == call_id:
 				return call
+		return None
 
 	return calls[0]
