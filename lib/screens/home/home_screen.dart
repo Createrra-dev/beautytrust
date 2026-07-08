@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/dashboard_period.dart';
+import '../../models/dashboard_stats.dart';
 import '../../services/dashboard_data_service.dart';
 import '../../widgets/home/current_appointments_section.dart';
 import '../../widgets/home/dashboard_top_section.dart';
@@ -17,13 +18,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
 	late DashboardPeriod _selectedPeriod;
 	final _dashboardService = DashboardDataService.instance;
+	DashboardStats? _stats;
+	var _isLoadingStats = true;
 
 	@override
 	void initState() {
 		super.initState();
 		_selectedPeriod = DashboardDataService.defaultPeriod;
 		_dashboardService.addListener(_onDashboardChanged);
-		DashboardDataService.syncFromApi();
+		_bootstrap();
 	}
 
 	@override
@@ -32,8 +35,32 @@ class _HomeScreenState extends State<HomeScreen> {
 		super.dispose();
 	}
 
+	Future<void> _bootstrap() async {
+		await DashboardDataService.syncFromApi();
+		if (!mounted) {
+			return;
+		}
+		setState(() {
+			_selectedPeriod = DashboardDataService.defaultPeriod;
+		});
+		await _loadStats();
+	}
+
 	void _onDashboardChanged() {
+		_loadStats();
 		setState(() {});
+	}
+
+	Future<void> _loadStats() async {
+		setState(() => _isLoadingStats = true);
+		final stats = await DashboardDataService.statsFor(_selectedPeriod);
+		if (!mounted) {
+			return;
+		}
+		setState(() {
+			_stats = stats;
+			_isLoadingStats = false;
+		});
 	}
 
 	Future<void> _openPeriodPicker() async {
@@ -47,12 +74,13 @@ class _HomeScreenState extends State<HomeScreen> {
 		}
 
 		setState(() => _selectedPeriod = selectedPeriod);
+		await _loadStats();
 	}
 
 	@override
 	Widget build(BuildContext context) {
-		final stats = DashboardDataService.statsFor(_selectedPeriod);
 		final appointments = DashboardDataService.currentAppointments();
+		final stats = _stats;
 
 		return SafeArea(
 			child: SingleChildScrollView(
@@ -60,10 +88,16 @@ class _HomeScreenState extends State<HomeScreen> {
 				child: Column(
 					crossAxisAlignment: CrossAxisAlignment.stretch,
 					children: [
-						DashboardTopSection(
-							stats: stats,
-							onPeriodTap: _openPeriodPicker,
-						),
+						if (_isLoadingStats || stats == null)
+							const Padding(
+								padding: EdgeInsets.symmetric(vertical: 24),
+								child: Center(child: CircularProgressIndicator()),
+							)
+						else
+							DashboardTopSection(
+								stats: stats,
+								onPeriodTap: _openPeriodPicker,
+							),
 						const SizedBox(height: 12),
 						const HomeQuickPhoneCheck(),
 						const SizedBox(height: 28),

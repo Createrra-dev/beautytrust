@@ -81,6 +81,18 @@ class MasterServiceSchema(BaseModel):
 	price: int
 
 
+class MasterServiceCreateRequest(BaseModel):
+	name: str
+	duration_label: str
+	price: int
+
+
+class MasterServiceUpdateRequest(BaseModel):
+	name: str | None = None
+	duration_label: str | None = None
+	price: int | None = None
+
+
 class DashboardStatsSchema(BaseModel):
 	period_label: str
 	protected_income: int
@@ -91,6 +103,12 @@ class DashboardStatsSchema(BaseModel):
 	no_shows_trend_label: str
 	completed_checks: int
 	checks_trend_label: str
+
+
+class DashboardPeriodSchema(BaseModel):
+	year: int
+	month: int
+	label: str
 
 
 class MasterProfileSchema(BaseModel):

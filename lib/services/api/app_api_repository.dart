@@ -1,11 +1,16 @@
 import '../../models/appointment_record.dart';
+import '../../models/check_history_record.dart';
 import '../../models/client_check_result.dart';
 import '../../models/client_profile.dart';
 import '../../models/community_message.dart';
 import '../../models/community_topic.dart';
+import '../../models/dashboard_period.dart';
+import '../../models/dashboard_stats.dart';
 import '../../models/master_profile.dart';
+import '../../models/master_service.dart';
 import '../../models/support_ticket.dart';
 import '../../models/visit_result.dart';
+import '../../utils/phone_formatter.dart';
 import 'beauty_trust_api.dart';
 
 class AppApiRepository {
@@ -13,9 +18,30 @@ class AppApiRepository {
 
 	final BeautyTrustApi _api;
 
-	Future<List<AppointmentRecord>> fetchAppointments() async {
-		final items = await _api.getJsonList('/api/appointments');
+	Future<List<AppointmentRecord>> fetchAppointments({
+		DateTime? from,
+		DateTime? to,
+		int limit = 100,
+		int offset = 0,
+	}) async {
+		final query = <String, String>{
+			'limit': '$limit',
+			'offset': '$offset',
+		};
+		if (from != null) {
+			query['from'] = from.toUtc().toIso8601String();
+		}
+		if (to != null) {
+			query['to'] = to.toUtc().toIso8601String();
+		}
+
+		final items = await _api.getJsonList('/api/appointments', query: query);
 		return items.map((item) => _appointmentFromJson(item as Map<String, dynamic>)).toList();
+	}
+
+	Future<AppointmentRecord> fetchAppointment(String appointmentId) async {
+		final json = await _api.getJson('/api/appointments/$appointmentId');
+		return _appointmentFromJson(json);
 	}
 
 	Future<AppointmentRecord> createAppointment(AppointmentRecord appointment) async {
@@ -39,6 +65,10 @@ class AppApiRepository {
 			},
 		);
 		return _appointmentFromJson(json);
+	}
+
+	Future<void> deleteAppointment(String appointmentId) async {
+		await _api.deleteJson('/api/appointments/$appointmentId');
 	}
 
 	Future<AppointmentRecord> saveVisitResult(
@@ -72,6 +102,73 @@ class AppApiRepository {
 			}
 			rethrow;
 		}
+	}
+
+	Future<List<CheckHistoryRecord>> fetchCheckHistory({
+		CheckHistoryFilter filter = CheckHistoryFilter.all,
+	}) async {
+		final filterValue = switch (filter) {
+			CheckHistoryFilter.all => 'all',
+			CheckHistoryFilter.reliable => 'reliable',
+			CheckHistoryFilter.risky => 'risky',
+		};
+		final items = await _api.getJsonList(
+			'/api/checks/history',
+			query: {'filter': filterValue},
+		);
+		return items
+			.map((item) => _checkHistoryFromJson(item as Map<String, dynamic>))
+			.toList();
+	}
+
+	Future<DashboardStats> fetchDashboardStats({
+		required int year,
+		required int month,
+	}) async {
+		final json = await _api.getJson(
+			'/api/dashboard/stats',
+			query: {
+				'year': '$year',
+				'month': '$month',
+			},
+		);
+		return DashboardStats(
+			periodLabel: json['period_label'] as String,
+			protectedIncome: json['protected_income'] as int,
+			incomeTrendLabel: json['income_trend_label'] as String,
+			incomeTrendPositive: json['income_trend_positive'] as bool,
+			sparklineValues: (json['sparkline_values'] as List<dynamic>)
+				.map((item) => (item as num).toDouble())
+				.toList(),
+			preventedNoShows: json['prevented_no_shows'] as int,
+			noShowsTrendLabel: json['no_shows_trend_label'] as String,
+			completedChecks: json['completed_checks'] as int,
+			checksTrendLabel: json['checks_trend_label'] as String,
+		);
+	}
+
+	Future<List<DashboardPeriod>> fetchDashboardPeriods() async {
+		final items = await _api.getJsonList('/api/dashboard/periods');
+		return items.map((item) {
+			final json = item as Map<String, dynamic>;
+			return DashboardPeriod(
+				year: json['year'] as int,
+				month: json['month'] as int,
+			);
+		}).toList();
+	}
+
+	Future<List<MasterService>> fetchMasterServices() async {
+		final items = await _api.getJsonList('/api/master/services');
+		return items.map((item) {
+			final json = item as Map<String, dynamic>;
+			return MasterService(
+				id: json['id'] as int?,
+				name: json['name'] as String,
+				durationLabel: json['duration_label'] as String,
+				price: json['price'] as int,
+			);
+		}).toList();
 	}
 
 	Future<List<CommunityTopic>> fetchCommunityTopics({String query = ''}) async {
@@ -198,6 +295,22 @@ class AppApiRepository {
 			'risk_level': _riskLevelName(appointment.riskLevel),
 			'days_since_verified': appointment.daysSinceVerified,
 		};
+	}
+
+	CheckHistoryRecord _checkHistoryFromJson(Map<String, dynamic> json) {
+		final phoneDigits = json['phone_digits'] as String? ?? '';
+		return CheckHistoryRecord(
+			id: json['id'] as String,
+			phone: phoneDigits.length == 10
+				? formatPhoneDisplay(phoneDigits)
+				: phoneDigits,
+			rating: (json['rating'] as num).toDouble(),
+			checkedAt: DateTime.parse(json['checked_at'] as String).toLocal(),
+			clientName: json['client_name'] as String?,
+			riskLevel: json['risk_level'] is String
+				? _riskLevelFromApi(json['risk_level'] as String)
+				: null,
+		);
 	}
 
 	ClientCheckResult _clientCheckFromJson(Map<String, dynamic> json) {

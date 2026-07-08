@@ -47,7 +47,14 @@ def seed_database(db: Session) -> None:
 		("Наращивание ресниц", "2,5 ч", 4200),
 	]
 	for name, duration, price in services:
-		db.add(models.MasterService(name=name, duration_label=duration, price=price))
+		db.add(
+			models.MasterService(
+				master_id=master.id,
+				name=name,
+				duration_label=duration,
+				price=price,
+			)
+		)
 
 	profiles = [
 		("9992345678", "Анна", "Отличный", 4.9, 0, 0, "Клиент в целом надёжный", "Рекомендуем к записи"),

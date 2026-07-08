@@ -86,6 +86,54 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 		);
 	}
 
+	Future<void> _confirmDelete() async {
+		final confirmed = await showDialog<bool>(
+			context: context,
+			builder: (dialogContext) {
+				return AlertDialog(
+					title: const Text('Удалить запись?'),
+					content: const Text('Запись будет удалена без возможности восстановления.'),
+					actions: [
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(false),
+							child: const Text('Отмена'),
+						),
+						TextButton(
+							onPressed: () => Navigator.of(dialogContext).pop(true),
+							child: const Text('Удалить'),
+						),
+					],
+				);
+			},
+		);
+
+		if (confirmed != true || !mounted) {
+			return;
+		}
+
+		try {
+			await DashboardDataService.deleteAppointment(_appointment.id);
+			if (!mounted) {
+				return;
+			}
+			Navigator.of(context).pop();
+			AppSnackBar.show(
+				context,
+				'Запись удалена',
+				type: AppSnackBarType.success,
+			);
+		} catch (error) {
+			if (!mounted) {
+				return;
+			}
+			AppSnackBar.show(
+				context,
+				error.toString(),
+				type: AppSnackBarType.error,
+			);
+		}
+	}
+
 	@override
 	Widget build(BuildContext context) {
 		final appointment = _appointment;
@@ -114,6 +162,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 								_AppointmentDetailsCard(
 									appointment: appointment,
 									onEdit: _openEditScreen,
+									onDelete: _confirmDelete,
 									onVisitResult: _openVisitResultScreen,
 								),
 							],
@@ -297,11 +346,13 @@ class _AppointmentDetailsCard extends StatelessWidget {
 	const _AppointmentDetailsCard({
 		required this.appointment,
 		required this.onEdit,
+		required this.onDelete,
 		required this.onVisitResult,
 	});
 
 	final AppointmentRecord appointment;
 	final VoidCallback onEdit;
+	final VoidCallback onDelete;
 	final VoidCallback onVisitResult;
 
 	@override
@@ -343,12 +394,7 @@ class _AppointmentDetailsCard extends StatelessWidget {
 							_AppointmentActionIconButton(
 								icon: Icons.delete_outline,
 								color: AppColors.error,
-								onPressed: () {
-									AppSnackBar.show(
-										context,
-										'Удаление записи скоро будет доступно',
-									);
-								},
+								onPressed: onDelete,
 							),
 						],
 					),

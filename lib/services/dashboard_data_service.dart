@@ -5,6 +5,7 @@ import '../models/dashboard_period.dart';
 import '../models/dashboard_stats.dart';
 import '../models/visit_result.dart';
 import 'api/app_api_repository.dart';
+import 'api/beauty_trust_api.dart';
 
 class DashboardDataService extends ChangeNotifier {
 	DashboardDataService._();
@@ -12,32 +13,52 @@ class DashboardDataService extends ChangeNotifier {
 	static final DashboardDataService instance = DashboardDataService._();
 	static final AppApiRepository _api = AppApiRepository();
 
-	static final List<DashboardPeriod> availablePeriods = [
-		const DashboardPeriod(year: 2026, month: 7),
-		const DashboardPeriod(year: 2026, month: 6),
-		const DashboardPeriod(year: 2026, month: 5),
-		const DashboardPeriod(year: 2026, month: 4),
-		const DashboardPeriod(year: 2026, month: 3),
-		const DashboardPeriod(year: 2026, month: 2),
-		const DashboardPeriod(year: 2026, month: 1),
-		const DashboardPeriod(year: 2025, month: 12),
-		const DashboardPeriod(year: 2025, month: 11),
-		const DashboardPeriod(year: 2025, month: 10),
-		const DashboardPeriod(year: 2024, month: 3),
-		const DashboardPeriod(year: 2024, month: 2),
-		const DashboardPeriod(year: 2024, month: 1),
-	];
+	final List<AppointmentRecord> _appointments = [];
+	List<DashboardPeriod> _periods = [];
+	final Map<String, DashboardStats> _statsCache = {};
+	DashboardPeriod? _defaultPeriod;
 
-	static DashboardPeriod get defaultPeriod => availablePeriods.first;
+	static List<DashboardPeriod> get availablePeriods {
+		if (instance._periods.isNotEmpty) {
+			return List<DashboardPeriod>.from(instance._periods);
+		}
+		final now = DateTime.now();
+		return [
+			DashboardPeriod(year: now.year, month: now.month),
+		];
+	}
 
-	static DashboardStats statsFor(DashboardPeriod period) {
-		final data = _statsByKey[_periodKey(period)];
+	static DashboardPeriod get defaultPeriod {
+		return instance._defaultPeriod ?? availablePeriods.first;
+	}
 
-		if (data != null) {
-			return data;
+	static Future<DashboardStats> statsFor(DashboardPeriod period) async {
+		final key = _periodKey(period);
+		final cached = instance._statsCache[key];
+		if (cached != null) {
+			return cached;
 		}
 
-		return _generatedStats(period);
+		try {
+			final stats = await _api.fetchDashboardStats(
+				year: period.year,
+				month: period.month,
+			);
+			instance._statsCache[key] = stats;
+			return stats;
+		} on ApiException {
+			return DashboardStats(
+				periodLabel: period.label,
+				protectedIncome: 0,
+				incomeTrendLabel: 'нет данных',
+				incomeTrendPositive: true,
+				sparklineValues: const [0.2, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0],
+				preventedNoShows: 0,
+				noShowsTrendLabel: 'нет данных',
+				completedChecks: 0,
+				checksTrendLabel: 'нет данных',
+			);
+		}
 	}
 
 	static List<AppointmentRecord> currentAppointments() {
@@ -49,12 +70,25 @@ class DashboardDataService extends ChangeNotifier {
 		instance._appointments
 			..clear()
 			..addAll(appointments);
+
+		try {
+			final periods = await _api.fetchDashboardPeriods();
+			if (periods.isNotEmpty) {
+				instance._periods = periods;
+				instance._defaultPeriod = periods.first;
+			}
+		} on ApiException {
+			// Keep fallback periods.
+		}
+
+		instance._statsCache.clear();
 		instance.notifyListeners();
 	}
 
 	static Future<void> addAppointment(AppointmentRecord appointment) async {
 		final created = await _api.createAppointment(appointment);
 		instance._appointments.insert(0, created);
+		instance._statsCache.clear();
 		instance.notifyListeners();
 	}
 
@@ -68,6 +102,7 @@ class DashboardDataService extends ChangeNotifier {
 		} else {
 			instance._appointments[appointmentIndex] = updated;
 		}
+		instance._statsCache.clear();
 		instance.notifyListeners();
 	}
 
@@ -80,10 +115,16 @@ class DashboardDataService extends ChangeNotifier {
 			return;
 		}
 		instance._appointments[appointmentIndex] = updated;
+		instance._statsCache.clear();
 		instance.notifyListeners();
 	}
 
-	final List<AppointmentRecord> _appointments = [];
+	static Future<void> deleteAppointment(String appointmentId) async {
+		await _api.deleteAppointment(appointmentId);
+		instance._appointments.removeWhere((item) => item.id == appointmentId);
+		instance._statsCache.clear();
+		instance.notifyListeners();
+	}
 
 	static AppointmentRecord? appointmentById(String id) {
 		for (final appointment in currentAppointments()) {
@@ -98,63 +139,4 @@ class DashboardDataService extends ChangeNotifier {
 	static String _periodKey(DashboardPeriod period) {
 		return '${period.year}-${period.month}';
 	}
-
-	static DashboardStats _generatedStats(DashboardPeriod period) {
-		final seed = period.year * 100 + period.month;
-		final income = 90000 + (seed % 17) * 4500;
-		final noShows = 6 + seed % 9;
-		final checks = 180 + seed % 90;
-		final trendPercent = 8 + seed % 25;
-
-		return DashboardStats(
-			periodLabel: period.label,
-			protectedIncome: income,
-			incomeTrendLabel: '+$trendPercent% к ${period.previousMonthLabel.toLowerCase()}',
-			incomeTrendPositive: true,
-			sparklineValues: _sparklineForSeed(seed),
-			preventedNoShows: noShows,
-			noShowsTrendLabel: '-${2 + seed % 4} к ${period.previousMonthLabel.toLowerCase()}',
-			completedChecks: checks,
-			checksTrendLabel: '+${10 + seed % 20} к ${period.previousMonthLabel.toLowerCase()}',
-		);
-	}
-
-	static List<double> _sparklineForSeed(int seed) {
-		final values = <double>[];
-		var value = 0.3 + (seed % 5) * 0.04;
-
-		for (var index = 0; index < 12; index++) {
-			value += ((seed + index * 7) % 5 - 2) * 0.03;
-			value = value.clamp(0.2, 1.0);
-			values.add(value);
-		}
-
-		values[values.length - 1] = 1.0;
-		return values;
-	}
-
-	static final Map<String, DashboardStats> _statsByKey = {
-		'2024-3': const DashboardStats(
-			periodLabel: 'Март 2024',
-			protectedIncome: 156000,
-			incomeTrendLabel: '+23% к февралю',
-			incomeTrendPositive: true,
-			sparklineValues: [0.35, 0.42, 0.38, 0.55, 0.48, 0.62, 0.58, 0.72, 0.68, 0.85, 0.78, 1.0],
-			preventedNoShows: 12,
-			noShowsTrendLabel: '-3 к февралю',
-			completedChecks: 247,
-			checksTrendLabel: '+31 к февралю',
-		),
-		'2026-7': const DashboardStats(
-			periodLabel: 'Июль 2026',
-			protectedIncome: 182000,
-			incomeTrendLabel: '+18% к июню',
-			incomeTrendPositive: true,
-			sparklineValues: [0.4, 0.45, 0.5, 0.48, 0.58, 0.62, 0.7, 0.68, 0.8, 0.86, 0.92, 1.0],
-			preventedNoShows: 15,
-			noShowsTrendLabel: '-2 к июню',
-			completedChecks: 268,
-			checksTrendLabel: '+24 к июню',
-		),
-	};
 }

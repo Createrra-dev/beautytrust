@@ -34,13 +34,27 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 	var _selectedDate = DateTime.now();
 	var _selectedTime = TimeOfDay.now();
 	MasterService? _selectedService;
+	List<MasterService> _services = [];
 	String? _errorText;
+	var _isLoadingServices = true;
 
 	@override
 	void initState() {
 		super.initState();
 		_nameController.text = widget.checkResult.clientName;
-		_selectedService = MasterServicesData.services.first;
+		_loadServices();
+	}
+
+	Future<void> _loadServices() async {
+		final services = await MasterServicesData.load();
+		if (!mounted) {
+			return;
+		}
+		setState(() {
+			_services = services;
+			_selectedService = services.isNotEmpty ? services.first : null;
+			_isLoadingServices = false;
+		});
 	}
 
 	@override
@@ -181,27 +195,33 @@ class _BookClientDialogState extends State<_BookClientDialog> {
 						const SizedBox(height: 16),
 						_DialogFieldLabel(label: 'Услуга'),
 						const SizedBox(height: 8),
-						DropdownButtonFormField<MasterService>(
-							initialValue: service,
-							decoration: _inputDecoration('Выберите услугу'),
-							dropdownColor: AppColors.surfaceElevated,
-							style: const TextStyle(
-								color: AppColors.textPrimary,
-								fontSize: 15,
+						if (_isLoadingServices)
+							const Padding(
+								padding: EdgeInsets.symmetric(vertical: 12),
+								child: Center(child: CircularProgressIndicator()),
+							)
+						else
+							DropdownButtonFormField<MasterService>(
+								initialValue: service,
+								decoration: _inputDecoration('Выберите услугу'),
+								dropdownColor: AppColors.surfaceElevated,
+								style: const TextStyle(
+									color: AppColors.textPrimary,
+									fontSize: 15,
+								),
+								items: _services.map((item) {
+									return DropdownMenuItem(
+										value: item,
+										child: Text(
+											'${item.name} · ${item.durationLabel}',
+											overflow: TextOverflow.ellipsis,
+										),
+									);
+								}).toList(),
+								onChanged: (value) {
+									setState(() => _selectedService = value);
+								},
 							),
-							items: MasterServicesData.services.map((item) {
-								return DropdownMenuItem(
-									value: item,
-									child: Text(
-										'${item.name} · ${item.durationLabel}',
-										overflow: TextOverflow.ellipsis,
-									),
-								);
-							}).toList(),
-							onChanged: (value) {
-								setState(() => _selectedService = value);
-							},
-						),
 						if (_errorText != null) ...[
 							const SizedBox(height: 12),
 							Text(

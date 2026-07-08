@@ -75,6 +75,21 @@ class BeautyTrustApi {
 		return _decodeMap(response);
 	}
 
+	Future<Map<String, dynamic>> deleteJson(String path) async {
+		final response = await _client.delete(_uri(path), headers: _headers());
+		if (response.statusCode >= 200 && response.statusCode < 300) {
+			if (response.body.isEmpty) {
+				return {'ok': true};
+			}
+			final decoded = jsonDecode(response.body);
+			if (decoded is Map<String, dynamic>) {
+				return decoded;
+			}
+			return {'ok': true};
+		}
+		throw ApiException(_extractError(response.body), statusCode: response.statusCode);
+	}
+
 	Map<String, dynamic> _decodeMap(http.Response response) {
 		if (response.statusCode >= 200 && response.statusCode < 300) {
 			return jsonDecode(response.body) as Map<String, dynamic>;

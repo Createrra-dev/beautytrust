@@ -1,7 +1,8 @@
+from calendar import monthrange
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import and_, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
@@ -13,22 +14,60 @@ from app.schemas.api import (
 	AppointmentCreateRequest,
 	AppointmentSchema,
 	AppointmentUpdateRequest,
+	CheckHistoryRecordSchema,
 	ClientCheckResponse,
 	ClientProfileSchema,
 	CommunityMessageCreateRequest,
 	CommunityMessageSchema,
 	CommunityTopicCreateRequest,
 	CommunityTopicSchema,
+	DashboardPeriodSchema,
 	DashboardStatsSchema,
 	MasterProfileSchema,
 	MasterReviewSchema,
+	MasterServiceCreateRequest,
 	MasterServiceSchema,
+	MasterServiceUpdateRequest,
 	PhoneCheckRequest,
 	SupportMessageCreateRequest,
 	SupportTicketCreateRequest,
 	SupportTicketSchema,
 	VisitResultSchema,
 )
+
+_RU_MONTHS = (
+	"",
+	"Январь",
+	"Февраль",
+	"Март",
+	"Апрель",
+	"Май",
+	"Июнь",
+	"Июль",
+	"Август",
+	"Сентябрь",
+	"Октябрь",
+	"Ноябрь",
+	"Декабрь",
+)
+
+_RU_MONTHS_PREPOSITIONAL = (
+	"",
+	"январю",
+	"февралю",
+	"марту",
+	"апрелю",
+	"маю",
+	"июню",
+	"июлю",
+	"августу",
+	"сентябрю",
+	"октябрю",
+	"ноябрю",
+	"декабрю",
+)
+
+_DEFAULT_SPARKLINE = [0.4, 0.45, 0.5, 0.48, 0.58, 0.62, 0.7, 0.68, 0.8, 0.86, 0.92, 1.0]
 
 router = APIRouter(prefix="/api", tags=["mobile"])
 
@@ -129,6 +168,141 @@ def _get_master_support_ticket(
 	return ticket
 
 
+def _period_label(year: int, month: int) -> str:
+	return f"{_RU_MONTHS[month]} {year}"
+
+
+def _month_bounds(year: int, month: int) -> tuple[datetime, datetime]:
+	start = datetime(year, month, 1, tzinfo=timezone.utc)
+	last_day = monthrange(year, month)[1]
+	end = datetime(year, month, last_day, 23, 59, 59, 999999, tzinfo=timezone.utc)
+	return start, end
+
+
+def _previous_month(year: int, month: int) -> tuple[int, int]:
+	if month == 1:
+		return year - 1, 12
+	return year, month - 1
+
+
+def _risk_level_from_rating(rating: float) -> str:
+	if rating >= 4:
+		return "low"
+	if rating >= 3:
+		return "medium"
+	return "high"
+
+
+def _percent_trend_label(current: int, previous: int, compare_month: int) -> str:
+	month_gen = _RU_MONTHS_PREPOSITIONAL[compare_month]
+	if previous == 0:
+		if current == 0:
+			return f"0 к {month_gen}"
+		return f"+100% к {month_gen}"
+	delta_pct = round(((current - previous) / previous) * 100)
+	sign = "+" if delta_pct > 0 else ""
+	return f"{sign}{delta_pct}% к {month_gen}"
+
+
+def _count_trend_label(current: int, previous: int, compare_month: int) -> str:
+	month_gen = _RU_MONTHS_PREPOSITIONAL[compare_month]
+	delta = current - previous
+	sign = "+" if delta > 0 else ""
+	return f"{sign}{delta} к {month_gen}"
+
+
+def _dashboard_metrics(db: Session, master_id: int, year: int, month: int) -> tuple[int, int, int]:
+	start, end = _month_bounds(year, month)
+	appointments = db.scalars(
+		select(models.Appointment)
+		.options(joinedload(models.Appointment.visit_result))
+		.where(
+			models.Appointment.master_id == master_id,
+			models.Appointment.scheduled_at >= start,
+			models.Appointment.scheduled_at <= end,
+		)
+	).unique().all()
+
+	protected_income = 0
+	prevented_no_shows = 0
+	for appointment in appointments:
+		visit = appointment.visit_result
+		if visit is None or visit.punctuality == "noShow":
+			continue
+		protected_income += appointment.service_price
+		if appointment.risk_level == "high":
+			prevented_no_shows += 1
+
+	completed_checks = db.scalar(
+		select(func.count())
+		.select_from(models.CheckHistoryRecord)
+		.where(
+			models.CheckHistoryRecord.master_id == master_id,
+			models.CheckHistoryRecord.checked_at >= start,
+			models.CheckHistoryRecord.checked_at <= end,
+		)
+	) or 0
+
+	return protected_income, prevented_no_shows, int(completed_checks)
+
+
+def _sparkline_values(db: Session, master_id: int, year: int, month: int) -> list[float]:
+	start, end = _month_bounds(year, month)
+	rows = db.execute(
+		select(
+			extract("day", models.Appointment.scheduled_at).label("day"),
+			func.coalesce(func.sum(models.Appointment.service_price), 0).label("income"),
+		)
+		.join(models.VisitResult, models.VisitResult.appointment_id == models.Appointment.id)
+		.where(
+			models.Appointment.master_id == master_id,
+			models.Appointment.scheduled_at >= start,
+			models.Appointment.scheduled_at <= end,
+			models.VisitResult.punctuality != "noShow",
+		)
+		.group_by("day")
+	).all()
+
+	if not rows:
+		return list(_DEFAULT_SPARKLINE)
+
+	days_in_month = monthrange(year, month)[1]
+	daily = [0.0] * days_in_month
+	for day, income in rows:
+		daily[int(day) - 1] = float(income)
+
+	# Compress into 12 buckets for the chart.
+	bucket_count = 12
+	buckets = [0.0] * bucket_count
+	for index, value in enumerate(daily):
+		bucket_index = min(bucket_count - 1, (index * bucket_count) // days_in_month)
+		buckets[bucket_index] += value
+
+	peak = max(buckets)
+	if peak <= 0:
+		return list(_DEFAULT_SPARKLINE)
+	return [round(value / peak, 4) for value in buckets]
+
+
+def _get_master_service(
+	db: Session,
+	master_id: int,
+	service_id: int,
+) -> models.MasterService:
+	service = db.scalar(
+		select(models.MasterService).where(
+			models.MasterService.id == service_id,
+			or_(
+				models.MasterService.master_id == master_id,
+				models.MasterService.master_id.is_(None),
+			),
+		)
+	)
+	if service is None:
+		raise HTTPException(status_code=404, detail="Service not found")
+	return service
+
+
 @router.get("/health")
 async def api_health() -> dict[str, str]:
 	return {"status": "ok", "service": "beautytrust-api"}
@@ -158,21 +332,75 @@ async def get_profile(master: models.Master = Depends(get_current_master)) -> Ma
 @router.get("/dashboard/stats", response_model=DashboardStatsSchema)
 async def get_dashboard_stats(
 	year: int = Query(default=2026),
-	month: int = Query(default=7),
+	month: int = Query(default=7, ge=1, le=12),
+	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> DashboardStatsSchema:
-	_ = (year, month, master)
-	return DashboardStatsSchema(
-		period_label="Июль 2026",
-		protected_income=master.protected_income or 0,
-		income_trend_label="+18% к июню",
-		income_trend_positive=True,
-		sparkline_values=[0.4, 0.45, 0.5, 0.48, 0.58, 0.62, 0.7, 0.68, 0.8, 0.86, 0.92, 1.0],
-		prevented_no_shows=master.prevented_no_shows or 0,
-		no_shows_trend_label="-2 к июню",
-		completed_checks=268,
-		checks_trend_label="+24 к июню",
+	if year < 2000 or year > 2100:
+		raise HTTPException(status_code=400, detail="Invalid year")
+
+	protected_income, prevented_no_shows, completed_checks = _dashboard_metrics(
+		db, master.id, year, month
 	)
+	prev_year, prev_month = _previous_month(year, month)
+	prev_income, prev_no_shows, prev_checks = _dashboard_metrics(
+		db, master.id, prev_year, prev_month
+	)
+
+	return DashboardStatsSchema(
+		period_label=_period_label(year, month),
+		protected_income=protected_income,
+		income_trend_label=_percent_trend_label(protected_income, prev_income, prev_month),
+		income_trend_positive=protected_income >= prev_income,
+		sparkline_values=_sparkline_values(db, master.id, year, month),
+		prevented_no_shows=prevented_no_shows,
+		no_shows_trend_label=_count_trend_label(prevented_no_shows, prev_no_shows, prev_month),
+		completed_checks=completed_checks,
+		checks_trend_label=_count_trend_label(completed_checks, prev_checks, prev_month),
+	)
+
+
+@router.get("/dashboard/periods", response_model=list[DashboardPeriodSchema])
+async def get_dashboard_periods(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[DashboardPeriodSchema]:
+	period_keys: set[tuple[int, int]] = set()
+
+	appointment_periods = db.execute(
+		select(
+			extract("year", models.Appointment.scheduled_at),
+			extract("month", models.Appointment.scheduled_at),
+		)
+		.where(models.Appointment.master_id == master.id)
+		.distinct()
+	).all()
+	for year_value, month_value in appointment_periods:
+		period_keys.add((int(year_value), int(month_value)))
+
+	check_periods = db.execute(
+		select(
+			extract("year", models.CheckHistoryRecord.checked_at),
+			extract("month", models.CheckHistoryRecord.checked_at),
+		)
+		.where(models.CheckHistoryRecord.master_id == master.id)
+		.distinct()
+	).all()
+	for year_value, month_value in check_periods:
+		period_keys.add((int(year_value), int(month_value)))
+
+	now = datetime.now(timezone.utc)
+	cursor = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+	for _ in range(6):
+		period_keys.add((cursor.year, cursor.month))
+		prev_year, prev_month = _previous_month(cursor.year, cursor.month)
+		cursor = datetime(prev_year, prev_month, 1, tzinfo=timezone.utc)
+
+	sorted_periods = sorted(period_keys, key=lambda item: (item[0], item[1]), reverse=True)
+	return [
+		DashboardPeriodSchema(year=year, month=month, label=_period_label(year, month))
+		for year, month in sorted_periods
+	]
 
 
 @router.get("/master/services", response_model=list[MasterServiceSchema])
@@ -180,8 +408,16 @@ async def list_services(
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[MasterServiceSchema]:
-	_ = master
-	services = db.scalars(select(models.MasterService).order_by(models.MasterService.id)).all()
+	services = db.scalars(
+		select(models.MasterService)
+		.where(
+			or_(
+				models.MasterService.master_id == master.id,
+				models.MasterService.master_id.is_(None),
+			)
+		)
+		.order_by(models.MasterService.id)
+	).all()
 	return [
 		MasterServiceSchema(
 			id=service.id,
@@ -193,18 +429,110 @@ async def list_services(
 	]
 
 
+@router.post("/master/services", response_model=MasterServiceSchema)
+async def create_service(
+	body: MasterServiceCreateRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterServiceSchema:
+	service = models.MasterService(
+		master_id=master.id,
+		name=body.name.strip(),
+		duration_label=body.duration_label.strip(),
+		price=body.price,
+	)
+	db.add(service)
+	db.commit()
+	db.refresh(service)
+	return MasterServiceSchema(
+		id=service.id,
+		name=service.name,
+		duration_label=service.duration_label,
+		price=service.price,
+	)
+
+
+@router.patch("/master/services/{service_id}", response_model=MasterServiceSchema)
+async def update_service(
+	service_id: int,
+	body: MasterServiceUpdateRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> MasterServiceSchema:
+	service = _get_master_service(db, master.id, service_id)
+	payload = body.model_dump(exclude_unset=True)
+	if "name" in payload and payload["name"] is not None:
+		payload["name"] = payload["name"].strip()
+	if "duration_label" in payload and payload["duration_label"] is not None:
+		payload["duration_label"] = payload["duration_label"].strip()
+	for field, value in payload.items():
+		setattr(service, field, value)
+	# Claim legacy global services when edited by a master.
+	if service.master_id is None:
+		service.master_id = master.id
+	db.commit()
+	db.refresh(service)
+	return MasterServiceSchema(
+		id=service.id,
+		name=service.name,
+		duration_label=service.duration_label,
+		price=service.price,
+	)
+
+
+@router.delete("/master/services/{service_id}")
+async def delete_service(
+	service_id: int,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> dict[str, bool]:
+	service = db.scalar(
+		select(models.MasterService).where(
+			models.MasterService.id == service_id,
+			models.MasterService.master_id == master.id,
+		)
+	)
+	if service is None:
+		raise HTTPException(status_code=404, detail="Service not found")
+	db.delete(service)
+	db.commit()
+	return {"ok": True}
+
+
 @router.get("/appointments", response_model=list[AppointmentSchema])
 async def list_appointments(
+	from_: datetime | None = Query(default=None, alias="from"),
+	to: datetime | None = Query(default=None),
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[AppointmentSchema]:
+	filters = [models.Appointment.master_id == master.id]
+	if from_ is not None:
+		filters.append(models.Appointment.scheduled_at >= from_)
+	if to is not None:
+		filters.append(models.Appointment.scheduled_at <= to)
+
 	appointments = db.scalars(
 		select(models.Appointment)
 		.options(joinedload(models.Appointment.visit_result))
-		.where(models.Appointment.master_id == master.id)
+		.where(and_(*filters))
 		.order_by(models.Appointment.scheduled_at)
+		.offset(offset)
+		.limit(limit)
 	).unique().all()
 	return [_appointment_schema(item) for item in appointments]
+
+
+@router.get("/appointments/{appointment_id}", response_model=AppointmentSchema)
+async def get_appointment(
+	appointment_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> AppointmentSchema:
+	appointment = _get_master_appointment(db, master.id, appointment_id)
+	return _appointment_schema(appointment)
 
 
 @router.post("/appointments", response_model=AppointmentSchema)
@@ -250,6 +578,20 @@ async def update_appointment(
 	return _appointment_schema(appointment)
 
 
+@router.delete("/appointments/{appointment_id}")
+async def delete_appointment(
+	appointment_id: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> dict[str, bool]:
+	appointment = _get_master_appointment(db, master.id, appointment_id)
+	if appointment.visit_result is not None:
+		db.delete(appointment.visit_result)
+	db.delete(appointment)
+	db.commit()
+	return {"ok": True}
+
+
 @router.post("/appointments/{appointment_id}/visit-result", response_model=AppointmentSchema)
 async def save_visit_result(
 	appointment_id: str,
@@ -290,7 +632,6 @@ async def check_client(
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> ClientCheckResponse:
-	_ = master
 	digits = "".join(char for char in body.phone if char.isdigit())
 	if len(digits) == 11 and digits.startswith("7"):
 		digits = digits[1:]
@@ -305,10 +646,57 @@ async def check_client(
 	if profile is None:
 		raise HTTPException(status_code=404, detail="Client not found")
 
+	now = datetime.now(timezone.utc)
+	db.add(
+		models.CheckHistoryRecord(
+			external_id=f"check-{int(now.timestamp() * 1000)}",
+			master_id=master.id,
+			client_name=profile.client_name,
+			phone_digits=profile.phone_digits,
+			rating=profile.reviews_average,
+			risk_level=_risk_level_from_rating(profile.reviews_average),
+			checked_at=now,
+		)
+	)
+	db.commit()
+
 	return ClientCheckResponse(
 		client_name=profile.client_name,
 		profile=_profile_schema(profile),
 	)
+
+
+@router.get("/checks/history", response_model=list[CheckHistoryRecordSchema])
+async def list_check_history(
+	filter: str = Query(default="all"),
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> list[CheckHistoryRecordSchema]:
+	if filter not in {"all", "reliable", "risky"}:
+		raise HTTPException(status_code=400, detail="Invalid filter")
+
+	filters = [models.CheckHistoryRecord.master_id == master.id]
+	if filter == "reliable":
+		filters.append(models.CheckHistoryRecord.rating >= 4)
+	elif filter == "risky":
+		filters.append(models.CheckHistoryRecord.rating < 3.5)
+
+	records = db.scalars(
+		select(models.CheckHistoryRecord)
+		.where(and_(*filters))
+		.order_by(models.CheckHistoryRecord.checked_at.desc())
+	).all()
+	return [
+		CheckHistoryRecordSchema(
+			id=record.external_id,
+			client_name=record.client_name,
+			phone_digits=record.phone_digits,
+			rating=record.rating,
+			risk_level=record.risk_level,
+			checked_at=record.checked_at,
+		)
+		for record in records
+	]
 
 
 @router.get("/community/topics", response_model=list[CommunityTopicSchema])

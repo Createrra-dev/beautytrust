@@ -28,7 +28,9 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 	late DateTime _selectedDate;
 	late TimeOfDay _selectedTime;
 	MasterService? _selectedService;
+	List<MasterService> _services = [];
 	String? _errorText;
+	var _isLoadingServices = true;
 
 	@override
 	void initState() {
@@ -41,8 +43,20 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 			hour: appointment.scheduledAt.hour,
 			minute: appointment.scheduledAt.minute,
 		);
-		_selectedService = MasterServicesData.findByName(appointment.serviceName) ??
-			MasterServicesData.services.first;
+		_loadServices();
+	}
+
+	Future<void> _loadServices() async {
+		final services = await MasterServicesData.load();
+		if (!mounted) {
+			return;
+		}
+		setState(() {
+			_services = services;
+			_selectedService = MasterServicesData.findByName(widget.appointment.serviceName) ??
+				(services.isNotEmpty ? services.first : null);
+			_isLoadingServices = false;
+		});
 	}
 
 	@override
@@ -233,27 +247,33 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 												const SizedBox(height: 16),
 												const _FieldLabel(label: 'Услуга'),
 												const SizedBox(height: 8),
-												DropdownButtonFormField<MasterService>(
-													initialValue: service,
-													decoration: _inputDecoration('Выберите услугу'),
-													dropdownColor: AppColors.surfaceElevated,
-													style: const TextStyle(
-														color: AppColors.textPrimary,
-														fontSize: 15,
+												if (_isLoadingServices)
+													const Padding(
+														padding: EdgeInsets.symmetric(vertical: 12),
+														child: Center(child: CircularProgressIndicator()),
+													)
+												else
+													DropdownButtonFormField<MasterService>(
+														initialValue: service,
+														decoration: _inputDecoration('Выберите услугу'),
+														dropdownColor: AppColors.surfaceElevated,
+														style: const TextStyle(
+															color: AppColors.textPrimary,
+															fontSize: 15,
+														),
+														items: _services.map((item) {
+															return DropdownMenuItem(
+																value: item,
+																child: Text(
+																	'${item.name} · ${item.durationLabel}',
+																	overflow: TextOverflow.ellipsis,
+																),
+															);
+														}).toList(),
+														onChanged: (value) {
+															setState(() => _selectedService = value);
+														},
 													),
-													items: MasterServicesData.services.map((item) {
-														return DropdownMenuItem(
-															value: item,
-															child: Text(
-																'${item.name} · ${item.durationLabel}',
-																overflow: TextOverflow.ellipsis,
-															),
-														);
-													}).toList(),
-													onChanged: (value) {
-														setState(() => _selectedService = value);
-													},
-												),
 											],
 										),
 									),

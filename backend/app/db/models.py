@@ -30,7 +30,8 @@ class MasterService(Base):
 	__tablename__ = "master_services"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True)
-	name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
+	master_id: Mapped[int | None] = mapped_column(ForeignKey("masters.id"), nullable=True, index=True)
+	name: Mapped[str] = mapped_column(String(200), nullable=False)
 	duration_label: Mapped[str] = mapped_column(String(50), nullable=False)
 	price: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -83,7 +84,11 @@ class Appointment(Base):
 	days_since_verified: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-	visit_result: Mapped["VisitResult | None"] = relationship(back_populates="appointment", uselist=False)
+	visit_result: Mapped["VisitResult | None"] = relationship(
+		back_populates="appointment",
+		uselist=False,
+		cascade="all, delete-orphan",
+	)
 
 
 class VisitResult(Base):

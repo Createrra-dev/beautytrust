@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/check_history_record.dart';
+import '../../services/api/beauty_trust_api.dart';
 import '../../services/check_history_data_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_snack_bar.dart';
@@ -16,14 +17,38 @@ class CheckHistoryScreen extends StatefulWidget {
 
 class _CheckHistoryScreenState extends State<CheckHistoryScreen> {
 	var _selectedFilter = CheckHistoryFilter.all;
+	var _isLoading = true;
+	List<CheckHistoryRecord> _checks = [];
+
+	@override
+	void initState() {
+		super.initState();
+		_loadChecks();
+	}
+
+	Future<void> _loadChecks() async {
+		setState(() => _isLoading = true);
+		try {
+			final checks = await CheckHistoryDataService.checksFor(_selectedFilter);
+			if (!mounted) {
+				return;
+			}
+			setState(() {
+				_checks = checks;
+				_isLoading = false;
+			});
+		} on ApiException catch (error) {
+			if (!mounted) {
+				return;
+			}
+			setState(() => _isLoading = false);
+			AppSnackBar.show(context, error.message, type: AppSnackBarType.error);
+		}
+	}
 
 	@override
 	Widget build(BuildContext context) {
 		final referenceNow = DateTime.now();
-		final checks = CheckHistoryDataService.checksFor(
-			_selectedFilter,
-			referenceNow: referenceNow,
-		);
 
 		return SafeArea(
 			child: Column(
@@ -36,24 +61,27 @@ class _CheckHistoryScreenState extends State<CheckHistoryScreen> {
 							selectedFilter: _selectedFilter,
 							onFilterSelected: (filter) {
 								setState(() => _selectedFilter = filter);
+								_loadChecks();
 							},
 						),
 					),
 					Expanded(
-						child: checks.isEmpty
-							? const _EmptyState()
-							: ListView.separated(
-								padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-								itemCount: checks.length,
-								separatorBuilder: (context, index) =>
-									const SizedBox(height: 8),
-								itemBuilder: (context, index) {
-									return CheckHistoryCard(
-										record: checks[index],
-										referenceNow: referenceNow,
-									);
-								},
-							),
+						child: _isLoading
+							? const Center(child: CircularProgressIndicator())
+							: _checks.isEmpty
+								? const _EmptyState()
+								: ListView.separated(
+									padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+									itemCount: _checks.length,
+									separatorBuilder: (context, index) =>
+										const SizedBox(height: 8),
+									itemBuilder: (context, index) {
+										return CheckHistoryCard(
+											record: _checks[index],
+											referenceNow: referenceNow,
+										);
+									},
+								),
 					),
 				],
 			),
@@ -107,11 +135,8 @@ class _EmptyState extends StatelessWidget {
 	Widget build(BuildContext context) {
 		return const Center(
 			child: Text(
-				'Проверок по выбранному фильтру нет',
-				style: TextStyle(
-					color: AppColors.textMuted,
-					fontSize: 15,
-				),
+				'Пока нет проверок',
+				style: TextStyle(color: AppColors.textMuted, fontSize: 15),
 			),
 		);
 	}

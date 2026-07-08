@@ -115,7 +115,9 @@ class CheckHistoryCard extends StatelessWidget {
 		if (appointmentId == null) {
 			AppSnackBar.show(
 				context,
-				'Детали проверки скоро будут доступны',
+				record.clientName == null
+					? 'Проверка: ${record.phone}'
+					: '${record.clientName}: ${record.phone}',
 			);
 			return;
 		}

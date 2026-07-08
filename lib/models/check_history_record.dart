@@ -12,6 +12,8 @@ class CheckHistoryRecord {
 		required this.phone,
 		required this.rating,
 		required this.checkedAt,
+		this.clientName,
+		this.riskLevel,
 		this.appointmentId,
 	});
 
@@ -19,6 +21,8 @@ class CheckHistoryRecord {
 	final String phone;
 	final double rating;
 	final DateTime checkedAt;
+	final String? clientName;
+	final AppointmentRiskLevel? riskLevel;
 	final String? appointmentId;
 
 	String get ratingLabel => appointmentRatingLabel(rating);
