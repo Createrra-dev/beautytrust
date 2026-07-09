@@ -26,6 +26,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 
 	YClientsIntegration? _integration;
 	var _enabled = false;
+	var _syncIntervalMinutes = 15;
 	var _isLoading = true;
 	var _isSaving = false;
 	var _isSyncing = false;
@@ -61,6 +62,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 			setState(() {
 				_integration = integration;
 				_enabled = integration.enabled;
+				_syncIntervalMinutes = integration.syncIntervalMinutes;
 				_partnerTokenController.text = integration.partnerToken;
 				_companyIdController.text = integration.companyId;
 				_loginController.text = integration.login;
@@ -122,6 +124,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 				login: _loginController.text.trim(),
 				password: password.isEmpty ? null : password,
 				authCode: authCode.isEmpty ? null : authCode,
+				syncIntervalMinutes: _syncIntervalMinutes,
 			);
 			if (!mounted) {
 				return;
@@ -279,6 +282,112 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 										if (_enabled) ...[
 											const SizedBox(height: 16),
 											_SettingsCard(
+												title: 'Статус',
+												children: [
+													if (integration?.hasUserToken == true)
+														const Text(
+															'User Token получен',
+															style: TextStyle(
+																color: AppColors.secondary,
+																fontWeight: FontWeight.w600,
+															),
+														)
+													else if (authPending)
+														const Text(
+															'Ожидается код подтверждения',
+															style: TextStyle(
+																color: AppColors.primary,
+																fontWeight: FontWeight.w600,
+															),
+														)
+													else
+														const Text(
+															'Подключение не настроено',
+															style: TextStyle(
+																color: AppColors.textMuted,
+																fontWeight: FontWeight.w600,
+															),
+														),
+													const SizedBox(height: 12),
+													const Text(
+														'Интервал синхронизации',
+														style: TextStyle(
+															fontSize: 14,
+															fontWeight: FontWeight.w600,
+														),
+													),
+													const SizedBox(height: 6),
+													DropdownButtonFormField<int>(
+														key: ValueKey(_syncIntervalMinutes),
+														initialValue: _syncIntervalMinutes,
+														isExpanded: true,
+														dropdownColor: AppColors.surfaceElevated,
+														style: const TextStyle(color: AppColors.textPrimary),
+														decoration: InputDecoration(
+															filled: true,
+															fillColor: AppColors.surfaceElevated,
+															border: OutlineInputBorder(
+																borderRadius: BorderRadius.circular(12),
+																borderSide: const BorderSide(color: AppColors.border),
+															),
+															enabledBorder: OutlineInputBorder(
+																borderRadius: BorderRadius.circular(12),
+																borderSide: const BorderSide(color: AppColors.border),
+															),
+															focusedBorder: OutlineInputBorder(
+																borderRadius: BorderRadius.circular(12),
+																borderSide: const BorderSide(color: AppColors.primary),
+															),
+														),
+														items: [
+															for (final option in YClientsIntegration.syncIntervalOptions)
+																DropdownMenuItem<int>(
+																	value: option.minutes,
+																	child: Text(option.label),
+																),
+														],
+														onChanged: (value) {
+															if (value == null) {
+																return;
+															}
+															setState(() => _syncIntervalMinutes = value);
+														},
+													),
+													if (integration?.lastSyncAt != null) ...[
+														const SizedBox(height: 12),
+														Text(
+															'Последняя синхронизация: '
+															'${_formatDateTime(integration!.lastSyncAt!)}',
+															style: const TextStyle(
+																color: AppColors.textMuted,
+																fontSize: 13,
+															),
+														),
+														Text(
+															'Загружено записей: ${integration.lastSyncCount}',
+															style: const TextStyle(
+																color: AppColors.textMuted,
+																fontSize: 13,
+															),
+														),
+													],
+													const SizedBox(height: 12),
+													OutlinedButton(
+														onPressed: _isSyncing ? null : _syncNow,
+														child: _isSyncing
+															? const SizedBox(
+																width: 20,
+																height: 20,
+																child: CircularProgressIndicator(
+																	strokeWidth: 2,
+																),
+															)
+															: const Text('Синхронизировать сейчас'),
+													),
+												],
+											),
+											const SizedBox(height: 16),
+											_SettingsCard(
 												title: 'Данные подключения',
 												children: [
 													_buildField(
@@ -334,55 +443,6 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 															label: 'Код из письма',
 															hint: '123456',
 															keyboardType: TextInputType.number,
-														),
-													],
-												),
-											],
-											if (integration != null &&
-												(integration.lastSyncAt != null ||
-													integration.hasUserToken)) ...[
-												const SizedBox(height: 16),
-												_SettingsCard(
-													title: 'Статус',
-													children: [
-														if (integration.hasUserToken)
-															const Text(
-																'User Token получен',
-																style: TextStyle(
-																	color: AppColors.secondary,
-																	fontWeight: FontWeight.w600,
-																),
-															),
-														if (integration.lastSyncAt != null) ...[
-															const SizedBox(height: 8),
-															Text(
-																'Последняя синхронизация: '
-																'${_formatDateTime(integration.lastSyncAt!)}',
-																style: const TextStyle(
-																	color: AppColors.textMuted,
-																	fontSize: 13,
-																),
-															),
-															Text(
-																'Загружено записей: ${integration.lastSyncCount}',
-																style: const TextStyle(
-																	color: AppColors.textMuted,
-																	fontSize: 13,
-																),
-															),
-														],
-														const SizedBox(height: 12),
-														OutlinedButton(
-															onPressed: _isSyncing ? null : _syncNow,
-															child: _isSyncing
-																? const SizedBox(
-																	width: 20,
-																	height: 20,
-																	child: CircularProgressIndicator(
-																		strokeWidth: 2,
-																	),
-																)
-																: const Text('Синхронизировать сейчас'),
 														),
 													],
 												),

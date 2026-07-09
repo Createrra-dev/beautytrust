@@ -7,6 +7,7 @@ class YClientsIntegration {
 		required this.hasUserToken,
 		required this.authPending,
 		required this.authRecipient,
+		required this.syncIntervalMinutes,
 		this.lastSyncAt,
 		required this.lastSyncCount,
 	});
@@ -18,8 +19,27 @@ class YClientsIntegration {
 	final bool hasUserToken;
 	final bool authPending;
 	final String authRecipient;
+	final int syncIntervalMinutes;
 	final DateTime? lastSyncAt;
 	final int lastSyncCount;
+
+	static const syncIntervalOptions = <({int minutes, String label})>[
+		(minutes: 0, label: 'Только вручную'),
+		(minutes: 5, label: 'Каждые 5 минут'),
+		(minutes: 15, label: 'Каждые 15 минут'),
+		(minutes: 30, label: 'Каждые 30 минут'),
+		(minutes: 60, label: 'Каждый час'),
+		(minutes: 180, label: 'Каждые 3 часа'),
+	];
+
+	static String syncIntervalLabel(int minutes) {
+		for (final option in syncIntervalOptions) {
+			if (option.minutes == minutes) {
+				return option.label;
+			}
+		}
+		return 'Каждые 15 минут';
+	}
 
 	YClientsIntegration copyWith({
 		bool? enabled,
@@ -29,6 +49,7 @@ class YClientsIntegration {
 		bool? hasUserToken,
 		bool? authPending,
 		String? authRecipient,
+		int? syncIntervalMinutes,
 		DateTime? lastSyncAt,
 		int? lastSyncCount,
 	}) {
@@ -40,6 +61,7 @@ class YClientsIntegration {
 			hasUserToken: hasUserToken ?? this.hasUserToken,
 			authPending: authPending ?? this.authPending,
 			authRecipient: authRecipient ?? this.authRecipient,
+			syncIntervalMinutes: syncIntervalMinutes ?? this.syncIntervalMinutes,
 			lastSyncAt: lastSyncAt ?? this.lastSyncAt,
 			lastSyncCount: lastSyncCount ?? this.lastSyncCount,
 		);

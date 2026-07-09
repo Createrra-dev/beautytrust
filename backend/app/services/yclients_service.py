@@ -250,6 +250,25 @@ def _extract_service(record: dict[str, Any]) -> tuple[str, int, int]:
 	return service_name, total_price, int(total_length)
 
 
+YCLIENTS_SYNC_INTERVALS_MINUTES = (0, 5, 15, 30, 60, 180)
+
+
+def should_sync_yclients(master: models.Master, *, force: bool = False) -> bool:
+	if not master.yclients_enabled or not master.yclients_user_token:
+		return False
+	if force:
+		return True
+
+	interval_minutes = master.yclients_sync_interval_minutes
+	if interval_minutes <= 0:
+		return False
+	if master.yclients_last_sync_at is None:
+		return True
+
+	elapsed = datetime.now(timezone.utc) - master.yclients_last_sync_at
+	return elapsed >= timedelta(minutes=interval_minutes)
+
+
 def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, int]:
 	if not master.yclients_enabled:
 		return {"imported": 0, "updated": 0, "skipped": 0}
@@ -375,6 +394,7 @@ def yclients_integration_schema(master: models.Master) -> dict[str, Any]:
 		"has_user_token": bool(master.yclients_user_token),
 		"auth_pending": bool(master.yclients_auth_uuid),
 		"auth_recipient": master.yclients_auth_recipient or "",
+		"sync_interval_minutes": master.yclients_sync_interval_minutes,
 		"last_sync_at": master.yclients_last_sync_at,
 		"last_sync_count": master.yclients_last_sync_count,
 	}

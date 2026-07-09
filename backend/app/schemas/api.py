@@ -42,6 +42,7 @@ class YClientsIntegrationSchema(BaseModel):
 	has_user_token: bool = False
 	auth_pending: bool = False
 	auth_recipient: str = ""
+	sync_interval_minutes: int = 15
 	last_sync_at: datetime | None = None
 	last_sync_count: int = 0
 
@@ -53,6 +54,7 @@ class YClientsIntegrationUpdateRequest(BaseModel):
 	login: str | None = None
 	password: str | None = None
 	auth_code: str | None = None
+	sync_interval_minutes: int | None = None
 
 
 class YClientsSyncResultSchema(BaseModel):

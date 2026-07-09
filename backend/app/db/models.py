@@ -36,6 +36,7 @@ class Master(Base):
 	yclients_auth_recipient: Mapped[str | None] = mapped_column(String(120), nullable=True)
 	yclients_last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	yclients_last_sync_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+	yclients_sync_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
 	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)
 	email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
 	password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)

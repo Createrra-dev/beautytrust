@@ -66,6 +66,8 @@ from app.services.yclients_service import (
 	authenticate_user,
 	confirm_authentication,
 	sync_yclients_appointments,
+	should_sync_yclients,
+	YCLIENTS_SYNC_INTERVALS_MINUTES,
 	yclients_integration_schema,
 )
 
@@ -680,6 +682,14 @@ async def update_yclients_integration(
 		master.yclients_company_id = updates["company_id"].strip() or None
 	if "login" in updates and updates["login"] is not None:
 		master.yclients_login = updates["login"].strip() or None
+	if "sync_interval_minutes" in updates and updates["sync_interval_minutes"] is not None:
+		interval = int(updates["sync_interval_minutes"])
+		if interval not in YCLIENTS_SYNC_INTERVALS_MINUTES:
+			raise HTTPException(
+				status_code=400,
+				detail="Недопустимый интервал синхронизации YClients",
+			)
+		master.yclients_sync_interval_minutes = interval
 
 	if auth_code and master.yclients_login and master.yclients_partner_token:
 		if not password:
@@ -965,7 +975,7 @@ async def list_appointments(
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[AppointmentSchema]:
-	if master.yclients_enabled and master.yclients_user_token:
+	if master.yclients_enabled and master.yclients_user_token and should_sync_yclients(master):
 		try:
 			sync_yclients_appointments(db, master)
 			_invalidate_dashboard_cache(master.id)
