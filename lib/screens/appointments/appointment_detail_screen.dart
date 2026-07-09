@@ -455,20 +455,11 @@ class _AppointmentDetailsCard extends StatelessWidget {
 						const SizedBox(height: 12),
 						Row(
 							children: [
-								const Text(
-									'Мастер:',
-									style: TextStyle(
-										color: AppColors.textMuted,
-										fontSize: 13,
-										fontWeight: FontWeight.w600,
-									),
-								),
-								const SizedBox(width: 8),
 								_YClientsStaffAvatar(
 									name: staffName,
 									avatarUrl: appointment.yclientsStaffAvatarUrl,
 								),
-								const SizedBox(width: 8),
+								const SizedBox(width: 12),
 								Expanded(
 									child: Text(
 										staffName,
@@ -643,7 +634,7 @@ class _YClientsStaffAvatar extends StatelessWidget {
 		final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
 
 		return CircleAvatar(
-			radius: 16,
+			radius: 24,
 			backgroundColor: AppColors.surfaceElevated,
 			backgroundImage: url != null && url.isNotEmpty ? NetworkImage(url) : null,
 			onBackgroundImageError: url != null && url.isNotEmpty ? (_, _) {} : null,
@@ -652,7 +643,7 @@ class _YClientsStaffAvatar extends StatelessWidget {
 					initial,
 					style: const TextStyle(
 						color: AppColors.textPrimary,
-						fontSize: 13,
+						fontSize: 18,
 						fontWeight: FontWeight.w700,
 					),
 				)
