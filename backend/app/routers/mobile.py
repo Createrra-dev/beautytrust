@@ -60,7 +60,7 @@ from app.services.cache_service import cache_delete_prefix, cache_get_json, cach
 from app.services.master_settings_service import load_master_settings, merge_master_settings
 from app.services.notification_service import notify_support_reply
 from app.services.password_service import normalize_email
-from app.services.uploads import avatar_url_for, uploads_root
+from app.services.uploads import avatar_url_for, uploads_root, yclients_staff_avatar_url_for
 from app.services.yclients_service import (
 	YClientsError,
 	authenticate_user,
@@ -178,6 +178,7 @@ def _appointment_schema(appointment: models.Appointment) -> AppointmentSchema:
 		days_since_verified=appointment.days_since_verified,
 		source=appointment.source,
 		yclients_staff_name=appointment.yclients_staff_name,
+		yclients_staff_avatar_url=yclients_staff_avatar_url_for(appointment),
 		visit_result=visit_result,
 	)
 

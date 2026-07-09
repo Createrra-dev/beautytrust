@@ -621,6 +621,7 @@ class AppApiRepository {
 			visitResult: visitResult,
 			source: json['source'] as String? ?? 'manual',
 			yclientsStaffName: json['yclients_staff_name'] as String?,
+			yclientsStaffAvatarUrl: json['yclients_staff_avatar_url'] as String?,
 		);
 	}
 

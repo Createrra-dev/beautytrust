@@ -389,6 +389,16 @@ class _AppointmentDetailsCard extends StatelessWidget {
 
 	@override
 	Widget build(BuildContext context) {
+		if (appointment.isFromYClients) {
+			return _buildYClientsCard();
+		}
+
+		return _buildDefaultCard();
+	}
+
+	Widget _buildYClientsCard() {
+		final staffName = appointment.yclientsStaffName;
+
 		return Container(
 			padding: const EdgeInsets.all(16),
 			decoration: BoxDecoration(
@@ -399,40 +409,126 @@ class _AppointmentDetailsCard extends StatelessWidget {
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
-					if (appointment.isFromYClients) ...[
-						Container(
-							padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-							decoration: BoxDecoration(
-								color: AppColors.primary.withValues(alpha: 0.12),
-								borderRadius: BorderRadius.circular(8),
+					Row(
+						children: [
+							const Spacer(),
+							_AppointmentActionIconButton(
+								icon: Icons.edit_outlined,
+								color: AppColors.primary,
+								onPressed: onEdit,
 							),
-							child: Row(
-								children: [
-									const Icon(
-										Icons.cloud_download_outlined,
-										size: 16,
-										color: AppColors.primary,
-									),
-									const SizedBox(width: 8),
-									Expanded(
-										child: Text(
-											appointment.yclientsStaffName != null &&
-													appointment.yclientsStaffName!.isNotEmpty
-												? 'Данные загружены из YClients · '
-													'${appointment.yclientsStaffName}'
-												: 'Данные загружены из YClients',
-											style: const TextStyle(
-												color: AppColors.primary,
-												fontSize: 12,
-												fontWeight: FontWeight.w600,
-											),
+							_AppointmentActionIconButton(
+								icon: Icons.delete_outline,
+								color: AppColors.error,
+								onPressed: onDelete,
+							),
+						],
+					),
+					Container(
+						padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+						decoration: BoxDecoration(
+							color: AppColors.primary.withValues(alpha: 0.12),
+							borderRadius: BorderRadius.circular(8),
+						),
+						child: const Row(
+							children: [
+								Icon(
+									Icons.cloud_download_outlined,
+									size: 16,
+									color: AppColors.primary,
+								),
+								SizedBox(width: 8),
+								Expanded(
+									child: Text(
+										'Данные загружены из YClients',
+										style: TextStyle(
+											color: AppColors.primary,
+											fontSize: 12,
+											fontWeight: FontWeight.w600,
 										),
 									),
-								],
-							),
+								),
+							],
 						),
+					),
+					if (staffName != null && staffName.isNotEmpty) ...[
 						const SizedBox(height: 12),
+						Row(
+							children: [
+								const Text(
+									'Мастер:',
+									style: TextStyle(
+										color: AppColors.textMuted,
+										fontSize: 13,
+										fontWeight: FontWeight.w600,
+									),
+								),
+								const SizedBox(width: 8),
+								_YClientsStaffAvatar(
+									name: staffName,
+									avatarUrl: appointment.yclientsStaffAvatarUrl,
+								),
+								const SizedBox(width: 8),
+								Expanded(
+									child: Text(
+										staffName,
+										style: const TextStyle(
+											color: AppColors.textPrimary,
+											fontSize: 15,
+											fontWeight: FontWeight.w600,
+										),
+									),
+								),
+							],
+						),
 					],
+					const SizedBox(height: 12),
+					_DetailInfoRow(
+						label: 'Когда',
+						value: '${appointment.dateLabel}, ${appointment.timeLabel}',
+					),
+					const SizedBox(height: 10),
+					_DetailInfoRow(
+						label: 'Услуга',
+						value: appointment.serviceName,
+						valueStyle: const TextStyle(
+							color: AppColors.textPrimary,
+							fontSize: 15,
+							fontWeight: FontWeight.w700,
+						),
+					),
+					const SizedBox(height: 10),
+					_DetailInfoRow(
+						label: 'Длительность',
+						value: appointment.serviceDurationLabel,
+					),
+					const SizedBox(height: 10),
+					_DetailInfoRow(
+						label: 'Стоимость',
+						value: formatServicePrice(appointment.servicePrice),
+					),
+					const SizedBox(height: 14),
+					FilledButton.icon(
+						onPressed: onVisitResult,
+						icon: const Icon(Icons.fact_check_outlined, size: 20),
+						label: const Text('Результат визита'),
+					),
+				],
+			),
+		);
+	}
+
+	Widget _buildDefaultCard() {
+		return Container(
+			padding: const EdgeInsets.all(16),
+			decoration: BoxDecoration(
+				color: AppColors.surface,
+				borderRadius: BorderRadius.circular(16),
+				border: Border.all(color: AppColors.border),
+			),
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.stretch,
+				children: [
 					Row(
 						crossAxisAlignment: CrossAxisAlignment.start,
 						children: [
@@ -489,6 +585,78 @@ class _AppointmentDetailsCard extends StatelessWidget {
 					),
 				],
 			),
+		);
+	}
+}
+
+class _DetailInfoRow extends StatelessWidget {
+	const _DetailInfoRow({
+		required this.label,
+		required this.value,
+		this.valueStyle,
+	});
+
+	final String label;
+	final String value;
+	final TextStyle? valueStyle;
+
+	@override
+	Widget build(BuildContext context) {
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.start,
+			children: [
+				Text(
+					label,
+					style: const TextStyle(
+						color: AppColors.textMuted,
+						fontSize: 12,
+						fontWeight: FontWeight.w600,
+					),
+				),
+				const SizedBox(height: 4),
+				Text(
+					value,
+					style: valueStyle ??
+						const TextStyle(
+							color: AppColors.textPrimary,
+							fontSize: 14,
+							fontWeight: FontWeight.w500,
+						),
+				),
+			],
+		);
+	}
+}
+
+class _YClientsStaffAvatar extends StatelessWidget {
+	const _YClientsStaffAvatar({
+		required this.name,
+		this.avatarUrl,
+	});
+
+	final String name;
+	final String? avatarUrl;
+
+	@override
+	Widget build(BuildContext context) {
+		final url = avatarUrl;
+		final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
+
+		return CircleAvatar(
+			radius: 16,
+			backgroundColor: AppColors.surfaceElevated,
+			backgroundImage: url != null && url.isNotEmpty ? NetworkImage(url) : null,
+			onBackgroundImageError: url != null && url.isNotEmpty ? (_, _) {} : null,
+			child: url == null || url.isEmpty
+				? Text(
+					initial,
+					style: const TextStyle(
+						color: AppColors.textPrimary,
+						fontSize: 13,
+						fontWeight: FontWeight.w700,
+					),
+				)
+				: null,
 		);
 	}
 }

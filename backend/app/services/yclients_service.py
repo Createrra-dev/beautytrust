@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from pathlib import Path
+
 import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -16,6 +18,7 @@ from app.services.client_rating_service import (
 	normalize_phone_digits,
 	risk_level_from_rating,
 )
+from app.services.uploads import uploads_root
 
 YCLIENTS_API_BASE = "https://api.yclients.com/api/v1"
 MOSCOW_TZ = ZoneInfo("Europe/Moscow")
@@ -250,6 +253,66 @@ def _extract_service(record: dict[str, Any]) -> tuple[str, int, int]:
 	return service_name, total_price, int(total_length)
 
 
+def _extract_staff(record: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
+	staff = record.get("staff") or {}
+	name = str(staff.get("name") or "").strip()[:120] or None
+	staff_id = staff.get("id")
+	staff_id_value = str(staff_id).strip() if staff_id is not None else None
+	avatar_url = str(staff.get("avatar_big") or staff.get("avatar") or "").strip() or None
+	return name, staff_id_value, avatar_url
+
+
+def _avatar_extension(content_type: str, avatar_url: str) -> str:
+	lower_type = content_type.lower()
+	if "png" in lower_type:
+		return ".png"
+	if "webp" in lower_type:
+		return ".webp"
+	lower_url = avatar_url.lower()
+	if lower_url.endswith(".png"):
+		return ".png"
+	if lower_url.endswith(".webp"):
+		return ".webp"
+	return ".jpg"
+
+
+def _download_staff_avatar(avatar_url: str, master_id: int, staff_id: str) -> str | None:
+	try:
+		response = httpx.get(avatar_url, timeout=30.0, follow_redirects=True)
+		if response.status_code >= 400 or not response.content:
+			return None
+
+		extension = _avatar_extension(response.headers.get("content-type", ""), avatar_url)
+		relative_path = f"yclients/staff_{master_id}_{staff_id}{extension}"
+		target_path = uploads_root() / relative_path
+		target_path.parent.mkdir(parents=True, exist_ok=True)
+		target_path.write_bytes(response.content)
+		return relative_path
+	except (httpx.HTTPError, OSError, ValueError):
+		return None
+
+
+def _sync_staff_avatar(
+	*,
+	master_id: int,
+	staff_id: str | None,
+	avatar_url: str | None,
+	current_path: str | None,
+	current_source_url: str | None,
+) -> tuple[str | None, str | None]:
+	if not avatar_url or not staff_id:
+		return current_path, current_source_url
+	if current_path and current_source_url == avatar_url:
+		existing = uploads_root() / current_path
+		if existing.is_file():
+			return current_path, current_source_url
+
+	new_path = _download_staff_avatar(avatar_url, master_id, staff_id)
+	if new_path:
+		return new_path, avatar_url
+	return current_path, current_source_url
+
+
 YCLIENTS_SYNC_INTERVALS_MINUTES = (0, 5, 15, 30, 60, 180)
 
 
@@ -313,8 +376,7 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 			continue
 
 		service_name, service_price, seance_length = _extract_service(record)
-		staff = record.get("staff") or {}
-		staff_name = str(staff.get("name") or "").strip()[:120] or None
+		staff_name, staff_id, staff_avatar_url = _extract_staff(record)
 		record_id = str(record.get("id") or "").strip()
 		if not record_id:
 			skipped += 1
@@ -341,6 +403,13 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 			)
 
 		if appointment is None:
+			avatar_path, avatar_source_url = _sync_staff_avatar(
+				master_id=master.id,
+				staff_id=staff_id,
+				avatar_url=staff_avatar_url,
+				current_path=None,
+				current_source_url=None,
+			)
 			appointment = models.Appointment(
 				external_id=external_id,
 				master_id=master.id,
@@ -357,6 +426,8 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 				source="yclients",
 				yclients_record_id=record_id,
 				yclients_staff_name=staff_name,
+				yclients_staff_avatar_path=avatar_path,
+				yclients_staff_avatar_source_url=avatar_source_url,
 			)
 			db.add(appointment)
 			imported += 1
@@ -374,6 +445,15 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 		appointment.source = "yclients"
 		appointment.yclients_record_id = record_id
 		appointment.yclients_staff_name = staff_name
+		avatar_path, avatar_source_url = _sync_staff_avatar(
+			master_id=master.id,
+			staff_id=staff_id,
+			avatar_url=staff_avatar_url,
+			current_path=appointment.yclients_staff_avatar_path,
+			current_source_url=appointment.yclients_staff_avatar_source_url,
+		)
+		appointment.yclients_staff_avatar_path = avatar_path
+		appointment.yclients_staff_avatar_source_url = avatar_source_url
 		db.add(appointment)
 		updated += 1
 

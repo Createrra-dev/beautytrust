@@ -107,6 +107,7 @@ class AppointmentSchema(BaseModel):
 	days_since_verified: int
 	source: str = "manual"
 	yclients_staff_name: str | None = None
+	yclients_staff_avatar_url: str | None = None
 	visit_result: VisitResultSchema | None = None
 
 

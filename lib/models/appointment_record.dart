@@ -32,6 +32,7 @@ class AppointmentRecord {
 		this.visitResult,
 		this.source = 'manual',
 		this.yclientsStaffName,
+		this.yclientsStaffAvatarUrl,
 	});
 
 	final String id;
@@ -48,6 +49,7 @@ class AppointmentRecord {
 	final VisitResult? visitResult;
 	final String source;
 	final String? yclientsStaffName;
+	final String? yclientsStaffAvatarUrl;
 
 	bool get isFromYClients => source == 'yclients';
 
@@ -77,6 +79,7 @@ class AppointmentRecord {
 		VisitResult? visitResult,
 		String? source,
 		String? yclientsStaffName,
+		String? yclientsStaffAvatarUrl,
 	}) {
 		return AppointmentRecord(
 			id: id,
@@ -93,6 +96,7 @@ class AppointmentRecord {
 			visitResult: visitResult ?? this.visitResult,
 			source: source ?? this.source,
 			yclientsStaffName: yclientsStaffName ?? this.yclientsStaffName,
+			yclientsStaffAvatarUrl: yclientsStaffAvatarUrl ?? this.yclientsStaffAvatarUrl,
 		);
 	}
 
