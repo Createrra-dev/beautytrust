@@ -399,6 +399,40 @@ class _AppointmentDetailsCard extends StatelessWidget {
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
+					if (appointment.isFromYClients) ...[
+						Container(
+							padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+							decoration: BoxDecoration(
+								color: AppColors.primary.withValues(alpha: 0.12),
+								borderRadius: BorderRadius.circular(8),
+							),
+							child: Row(
+								children: [
+									const Icon(
+										Icons.cloud_download_outlined,
+										size: 16,
+										color: AppColors.primary,
+									),
+									const SizedBox(width: 8),
+									Expanded(
+										child: Text(
+											appointment.yclientsStaffName != null &&
+													appointment.yclientsStaffName!.isNotEmpty
+												? 'Данные загружены из YClients · '
+													'${appointment.yclientsStaffName}'
+												: 'Данные загружены из YClients',
+											style: const TextStyle(
+												color: AppColors.primary,
+												fontSize: 12,
+												fontWeight: FontWeight.w600,
+											),
+										),
+									),
+								],
+							),
+						),
+						const SizedBox(height: 12),
+					],
 					Row(
 						crossAxisAlignment: CrossAxisAlignment.start,
 						children: [

@@ -44,6 +44,9 @@ from app.schemas.api import (
 	SupportTicketCreateRequest,
 	SupportTicketSchema,
 	VisitResultSchema,
+	YClientsIntegrationSchema,
+	YClientsIntegrationUpdateRequest,
+	YClientsSyncResultSchema,
 )
 from app.services.client_rating_service import (
 	add_client_review,
@@ -58,6 +61,12 @@ from app.services.master_settings_service import load_master_settings, merge_mas
 from app.services.notification_service import notify_support_reply
 from app.services.password_service import normalize_email
 from app.services.uploads import avatar_url_for, uploads_root
+from app.services.yclients_service import (
+	YClientsError,
+	authenticate_user,
+	sync_yclients_appointments,
+	yclients_integration_schema,
+)
 
 _RU_MONTHS = (
 	"",
@@ -164,6 +173,8 @@ def _appointment_schema(appointment: models.Appointment) -> AppointmentSchema:
 		risk_level=appointment.risk_level,
 		status=appointment.status,
 		days_since_verified=appointment.days_since_verified,
+		source=appointment.source,
+		yclients_staff_name=appointment.yclients_staff_name,
 		visit_result=visit_result,
 	)
 
@@ -640,6 +651,84 @@ async def update_profile_settings(
 	return MasterSettingsSchema(**settings)
 
 
+@router.get("/profile/yclients", response_model=YClientsIntegrationSchema)
+async def get_yclients_integration(
+	master: models.Master = Depends(get_current_master),
+) -> YClientsIntegrationSchema:
+	return YClientsIntegrationSchema(**yclients_integration_schema(master))
+
+
+@router.patch("/profile/yclients", response_model=YClientsIntegrationSchema)
+async def update_yclients_integration(
+	body: YClientsIntegrationUpdateRequest,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> YClientsIntegrationSchema:
+	updates = body.model_dump(exclude_unset=True)
+	password = updates.pop("password", None)
+
+	if "enabled" in updates and updates["enabled"] is not None:
+		master.yclients_enabled = bool(updates["enabled"])
+	if "partner_token" in updates and updates["partner_token"] is not None:
+		master.yclients_partner_token = updates["partner_token"].strip() or None
+	if "company_id" in updates and updates["company_id"] is not None:
+		master.yclients_company_id = updates["company_id"].strip() or None
+	if "form_id" in updates and updates["form_id"] is not None:
+		master.yclients_form_id = updates["form_id"].strip() or None
+	if "login" in updates and updates["login"] is not None:
+		master.yclients_login = updates["login"].strip() or None
+
+	if password and master.yclients_login and master.yclients_partner_token:
+		try:
+			master.yclients_user_token = authenticate_user(
+				master.yclients_partner_token,
+				master.yclients_login,
+				password,
+			)
+		except YClientsError as error:
+			raise HTTPException(status_code=400, detail=error.message) from error
+
+	if master.yclients_enabled:
+		if not master.yclients_partner_token or not master.yclients_company_id:
+			raise HTTPException(
+				status_code=400,
+				detail="Укажите Partner Token и Company ID",
+			)
+		if not master.yclients_user_token:
+			raise HTTPException(
+				status_code=400,
+				detail="Укажите логин и пароль YClients для получения User Token",
+			)
+
+	db.add(master)
+	db.commit()
+	db.refresh(master)
+
+	if master.yclients_enabled:
+		try:
+			sync_yclients_appointments(db, master)
+		except YClientsError as error:
+			raise HTTPException(status_code=400, detail=error.message) from error
+		db.refresh(master)
+
+	return YClientsIntegrationSchema(**yclients_integration_schema(master))
+
+
+@router.post("/profile/yclients/sync", response_model=YClientsSyncResultSchema)
+async def sync_yclients_integration(
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> YClientsSyncResultSchema:
+	if not master.yclients_enabled:
+		raise HTTPException(status_code=400, detail="Интеграция YClients отключена")
+	try:
+		result = sync_yclients_appointments(db, master)
+	except YClientsError as error:
+		raise HTTPException(status_code=400, detail=error.message) from error
+	_invalidate_dashboard_cache(master.id)
+	return YClientsSyncResultSchema(**result)
+
+
 @router.get("/dashboard/stats", response_model=DashboardStatsSchema)
 async def get_dashboard_stats(
 	year: int = Query(default=2026),
@@ -847,6 +936,13 @@ async def list_appointments(
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> list[AppointmentSchema]:
+	if master.yclients_enabled and master.yclients_user_token:
+		try:
+			sync_yclients_appointments(db, master)
+			_invalidate_dashboard_cache(master.id)
+		except YClientsError:
+			pass
+
 	filters = [models.Appointment.master_id == master.id]
 	if from_ is not None:
 		filters.append(models.Appointment.scheduled_at >= from_)

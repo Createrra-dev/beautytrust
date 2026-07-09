@@ -14,6 +14,7 @@ import '../../models/profile_stats.dart';
 import '../../models/support_ticket.dart';
 import '../../models/tariff_plan.dart';
 import '../../models/visit_result.dart';
+import '../../models/yclients_integration.dart';
 import '../../utils/phone_formatter.dart';
 import 'beauty_trust_api.dart';
 
@@ -484,6 +485,52 @@ class AppApiRepository {
 		return _masterSettingsFromJson(json);
 	}
 
+	Future<YClientsIntegration> fetchYClientsIntegration() async {
+		final json = await _api.getJson('/api/profile/yclients');
+		return _yClientsIntegrationFromJson(json);
+	}
+
+	Future<YClientsIntegration> updateYClientsIntegration({
+		bool? enabled,
+		String? partnerToken,
+		String? companyId,
+		String? formId,
+		String? login,
+		String? password,
+	}) async {
+		final body = <String, dynamic>{};
+		if (enabled != null) {
+			body['enabled'] = enabled;
+		}
+		if (partnerToken != null) {
+			body['partner_token'] = partnerToken;
+		}
+		if (companyId != null) {
+			body['company_id'] = companyId;
+		}
+		if (formId != null) {
+			body['form_id'] = formId;
+		}
+		if (login != null) {
+			body['login'] = login;
+		}
+		if (password != null) {
+			body['password'] = password;
+		}
+
+		final json = await _api.patchJson('/api/profile/yclients', body: body);
+		return _yClientsIntegrationFromJson(json);
+	}
+
+	Future<YClientsSyncResult> syncYClientsIntegration() async {
+		final json = await _api.postJson('/api/profile/yclients/sync', body: {});
+		return YClientsSyncResult(
+			imported: json['imported'] as int? ?? 0,
+			updated: json['updated'] as int? ?? 0,
+			skipped: json['skipped'] as int? ?? 0,
+		);
+	}
+
 	Future<MasterProfile> updateProfile({
 		String? firstName,
 		String? email,
@@ -568,6 +615,8 @@ class AppApiRepository {
 			daysSinceVerified: json['days_since_verified'] as int,
 			status: _statusFromApi(json['status'] as String? ?? 'scheduled'),
 			visitResult: visitResult,
+			source: json['source'] as String? ?? 'manual',
+			yclientsStaffName: json['yclients_staff_name'] as String?,
 		);
 	}
 
@@ -694,6 +743,20 @@ class AppApiRepository {
 				json['marketing_notifications_enabled'] as bool? ?? false,
 			visitResultDefaultsEnabled:
 				json['visit_result_defaults_enabled'] as bool? ?? true,
+		);
+	}
+
+	YClientsIntegration _yClientsIntegrationFromJson(Map<String, dynamic> json) {
+		final lastSyncRaw = json['last_sync_at'] as String?;
+		return YClientsIntegration(
+			enabled: json['enabled'] as bool? ?? false,
+			partnerToken: json['partner_token'] as String? ?? '',
+			companyId: json['company_id'] as String? ?? '',
+			formId: json['form_id'] as String? ?? '',
+			login: json['login'] as String? ?? '',
+			hasUserToken: json['has_user_token'] as bool? ?? false,
+			lastSyncAt: lastSyncRaw == null ? null : DateTime.parse(lastSyncRaw).toLocal(),
+			lastSyncCount: json['last_sync_count'] as int? ?? 0,
 		);
 	}
 

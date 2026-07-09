@@ -30,6 +30,8 @@ class AppointmentRecord {
 		required this.daysSinceVerified,
 		this.status = AppointmentStatus.scheduled,
 		this.visitResult,
+		this.source = 'manual',
+		this.yclientsStaffName,
 	});
 
 	final String id;
@@ -44,6 +46,10 @@ class AppointmentRecord {
 	final int daysSinceVerified;
 	final AppointmentStatus status;
 	final VisitResult? visitResult;
+	final String source;
+	final String? yclientsStaffName;
+
+	bool get isFromYClients => source == 'yclients';
 
 	String get dateLabel => formatAppointmentDateLabel(scheduledAt);
 
@@ -69,6 +75,8 @@ class AppointmentRecord {
 		int? daysSinceVerified,
 		AppointmentStatus? status,
 		VisitResult? visitResult,
+		String? source,
+		String? yclientsStaffName,
 	}) {
 		return AppointmentRecord(
 			id: id,
@@ -83,6 +91,8 @@ class AppointmentRecord {
 			daysSinceVerified: daysSinceVerified ?? this.daysSinceVerified,
 			status: status ?? this.status,
 			visitResult: visitResult ?? this.visitResult,
+			source: source ?? this.source,
+			yclientsStaffName: yclientsStaffName ?? this.yclientsStaffName,
 		);
 	}
 

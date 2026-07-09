@@ -6,6 +6,7 @@ import '../../services/auth_session.dart';
 import '../../services/biometric_auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_snack_bar.dart';
+import 'yclients_integration_screen.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
 	const ProfileSettingsScreen({super.key});
@@ -203,6 +204,28 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 												],
 											),
 										],
+										const SizedBox(height: 16),
+										_SettingsCard(
+											title: 'Интеграции',
+											children: [
+												ListTile(
+													contentPadding: EdgeInsets.zero,
+													title: const Text('YClients'),
+													subtitle: const Text(
+														'Загрузка записей из онлайн-записи YClients',
+													),
+													trailing: const Icon(
+														Icons.chevron_right_rounded,
+														color: AppColors.textMuted,
+													),
+													onTap: () {
+														Navigator.of(context).pushNamed(
+															YClientsIntegrationScreen.routeName,
+														);
+													},
+												),
+											],
+										),
 										const SizedBox(height: 16),
 										_SettingsCard(
 											title: 'Результаты визитов',

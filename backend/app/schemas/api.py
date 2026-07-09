@@ -34,6 +34,32 @@ class MasterSettingsUpdateRequest(BaseModel):
 	visit_result_defaults_enabled: bool | None = None
 
 
+class YClientsIntegrationSchema(BaseModel):
+	enabled: bool = False
+	partner_token: str = ""
+	company_id: str = ""
+	form_id: str = ""
+	login: str = ""
+	has_user_token: bool = False
+	last_sync_at: datetime | None = None
+	last_sync_count: int = 0
+
+
+class YClientsIntegrationUpdateRequest(BaseModel):
+	enabled: bool | None = None
+	partner_token: str | None = None
+	company_id: str | None = None
+	form_id: str | None = None
+	login: str | None = None
+	password: str | None = None
+
+
+class YClientsSyncResultSchema(BaseModel):
+	imported: int
+	updated: int
+	skipped: int
+
+
 class ClientProfileSchema(BaseModel):
 	phone: str
 	rating_label: str
@@ -76,6 +102,8 @@ class AppointmentSchema(BaseModel):
 	risk_level: str
 	status: str = "scheduled"
 	days_since_verified: int
+	source: str = "manual"
+	yclients_staff_name: str | None = None
 	visit_result: VisitResultSchema | None = None
 
 

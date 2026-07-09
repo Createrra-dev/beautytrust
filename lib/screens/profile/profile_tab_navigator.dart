@@ -9,6 +9,7 @@ import 'master_reviews_screen.dart';
 import 'master_services_screen.dart';
 import 'profile_settings_screen.dart';
 import 'profile_stats_screen.dart';
+import 'yclients_integration_screen.dart';
 import '../support/create_support_ticket_screen.dart';
 import '../support/support_chat_screen.dart';
 import '../support/support_tickets_screen.dart';
@@ -50,6 +51,11 @@ class ProfileTabNavigator extends StatelessWidget {
 						return MaterialPageRoute(
 							settings: settings,
 							builder: (context) => const ProfileSettingsScreen(),
+						);
+					case YClientsIntegrationScreen.routeName:
+						return MaterialPageRoute(
+							settings: settings,
+							builder: (context) => const YClientsIntegrationScreen(),
 						);
 					case TariffsScreen.routeName:
 						return MaterialPageRoute(
