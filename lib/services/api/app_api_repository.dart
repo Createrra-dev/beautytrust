@@ -473,6 +473,7 @@ class AppApiRepository {
 				'push_notifications_enabled': settings.pushNotificationsEnabled,
 				'email_notifications_enabled': settings.emailNotificationsEnabled,
 				'marketing_notifications_enabled': settings.marketingNotificationsEnabled,
+				'visit_result_defaults_enabled': settings.visitResultDefaultsEnabled,
 			},
 		);
 		return _masterSettingsFromJson(json);
@@ -681,6 +682,8 @@ class AppApiRepository {
 			emailNotificationsEnabled: json['email_notifications_enabled'] as bool? ?? true,
 			marketingNotificationsEnabled:
 				json['marketing_notifications_enabled'] as bool? ?? false,
+			visitResultDefaultsEnabled:
+				json['visit_result_defaults_enabled'] as bool? ?? true,
 		);
 	}
 

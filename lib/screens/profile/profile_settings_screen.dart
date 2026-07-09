@@ -203,6 +203,29 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 												],
 											),
 										],
+										const SizedBox(height: 16),
+										_SettingsCard(
+											title: 'Результаты визитов',
+											children: [
+												SwitchListTile(
+													contentPadding: EdgeInsets.zero,
+													title: const Text('Выставлять базовые ответы'),
+													subtitle: const Text(
+														'При открытии результата визита автоматически '
+														'выбираются: вовремя, оплата да, поведение нет, '
+														'чаевые нет — можно сразу сохранить.',
+													),
+													value: settings.visitResultDefaultsEnabled,
+													onChanged: (value) {
+														_updateSettings(
+															settings.copyWith(
+																visitResultDefaultsEnabled: value,
+															),
+														);
+													},
+												),
+											],
+										),
 									],
 								),
 					),

@@ -24,12 +24,14 @@ class MasterSettingsSchema(BaseModel):
 	push_notifications_enabled: bool = True
 	email_notifications_enabled: bool = True
 	marketing_notifications_enabled: bool = False
+	visit_result_defaults_enabled: bool = True
 
 
 class MasterSettingsUpdateRequest(BaseModel):
 	push_notifications_enabled: bool | None = None
 	email_notifications_enabled: bool | None = None
 	marketing_notifications_enabled: bool | None = None
+	visit_result_defaults_enabled: bool | None = None
 
 
 class ClientProfileSchema(BaseModel):

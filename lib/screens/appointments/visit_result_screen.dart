@@ -4,6 +4,7 @@ import '../../models/appointment_record.dart';
 import '../../models/client_profile.dart';
 import '../../models/visit_result.dart';
 import '../../navigation/main_shell_navigation.dart';
+import '../../services/api/app_api_repository.dart';
 import '../../services/client_profile_service.dart';
 import '../../services/dashboard_data_service.dart';
 import '../../theme/app_theme.dart';
@@ -22,18 +23,21 @@ class VisitResultScreen extends StatefulWidget {
 }
 
 class _VisitResultScreenState extends State<VisitResultScreen> {
-	VisitPunctuality _punctuality = VisitPunctuality.onTime;
-	bool _paidInFull = true;
-	bool _hadBehaviorIssues = false;
+	final _api = AppApiRepository();
+	VisitPunctuality? _punctuality;
+	bool? _paidInFull;
+	bool? _hadBehaviorIssues;
 	bool _wasUnfriendly = false;
 	bool _hadScandal = false;
 	bool _threatenedComplaints = false;
 	bool _demandedDiscount = false;
 	bool _stoleFromSalon = false;
-	bool _leftTips = false;
+	bool? _leftTips;
 	final _commentController = TextEditingController();
 	String? _errorText;
 	var _isSaving = false;
+	var _isLoading = true;
+	var _useDefaults = true;
 
 	double? get _previewRating {
 		return calculateVisitResultRating(
@@ -52,19 +56,71 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 	@override
 	void initState() {
 		super.initState();
+		_bootstrap();
+	}
+
+	Future<void> _bootstrap() async {
 		final initialResult = widget.appointment.visitResult;
 		if (initialResult != null) {
-			_punctuality = initialResult.punctuality;
-			_paidInFull = initialResult.paidInFull;
-			_hadBehaviorIssues = initialResult.hadBehaviorIssues;
-			_wasUnfriendly = initialResult.wasUnfriendly;
-			_hadScandal = initialResult.hadScandal;
-			_threatenedComplaints = initialResult.threatenedComplaints;
-			_demandedDiscount = initialResult.demandedDiscount;
-			_stoleFromSalon = initialResult.stoleFromSalon;
-			_leftTips = initialResult.leftTips;
-			_commentController.text = initialResult.comment ?? '';
+			_applyVisitResult(initialResult);
+			if (mounted) {
+				setState(() => _isLoading = false);
+			}
+			return;
 		}
+
+		var useDefaults = true;
+		try {
+			final settings = await _api.fetchProfileSettings();
+			useDefaults = settings.visitResultDefaultsEnabled;
+		} catch (_) {
+			useDefaults = true;
+		}
+
+		if (!mounted) {
+			return;
+		}
+
+		setState(() {
+			_useDefaults = useDefaults;
+			if (useDefaults) {
+				_applyVisitResult(VisitResult.defaults());
+			}
+			_isLoading = false;
+		});
+	}
+
+	void _applyVisitResult(VisitResult result) {
+		_punctuality = result.punctuality;
+		_paidInFull = result.paidInFull;
+		_hadBehaviorIssues = result.hadBehaviorIssues;
+		_wasUnfriendly = result.wasUnfriendly;
+		_hadScandal = result.hadScandal;
+		_threatenedComplaints = result.threatenedComplaints;
+		_demandedDiscount = result.demandedDiscount;
+		_stoleFromSalon = result.stoleFromSalon;
+		_leftTips = result.leftTips;
+		_commentController.text = result.comment ?? '';
+	}
+
+	void _applyDefaultVisitDetails() {
+		final defaults = VisitResult.defaults();
+		_paidInFull = defaults.paidInFull;
+		_hadBehaviorIssues = defaults.hadBehaviorIssues;
+		_leftTips = defaults.leftTips;
+		_clearBehaviorDetails();
+	}
+
+	void _clearVisitDetails() {
+		if (_useDefaults) {
+			_applyDefaultVisitDetails();
+			return;
+		}
+
+		_paidInFull = null;
+		_hadBehaviorIssues = null;
+		_leftTips = null;
+		_clearBehaviorDetails();
 	}
 
 	void _clearBehaviorDetails() {
@@ -73,13 +129,6 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 		_threatenedComplaints = false;
 		_demandedDiscount = false;
 		_stoleFromSalon = false;
-	}
-
-	void _clearVisitDetails() {
-		_paidInFull = true;
-		_hadBehaviorIssues = false;
-		_leftTips = false;
-		_clearBehaviorDetails();
 	}
 
 	@override
@@ -94,19 +143,41 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 		}
 
 		final punctuality = _punctuality;
+		if (punctuality == null) {
+			setState(() => _errorText = 'Укажите, пришёл ли клиент вовремя');
+			return;
+		}
+
+		if (punctuality != VisitPunctuality.noShow) {
+			if (_paidInFull == null) {
+				setState(() => _errorText = 'Укажите, оплатил ли клиент полностью');
+				return;
+			}
+
+			if (_hadBehaviorIssues == null) {
+				setState(() => _errorText = 'Укажите, были ли проблемы с поведением');
+				return;
+			}
+
+			if (_leftTips == null) {
+				setState(() => _errorText = 'Укажите, оставил ли клиент чаевые');
+				return;
+			}
+		}
 
 		final comment = _commentController.text.trim();
+		final hadBehaviorIssues =
+			punctuality != VisitPunctuality.noShow && (_hadBehaviorIssues ?? false);
 		final visitResult = VisitResult(
 			punctuality: punctuality,
-			paidInFull: punctuality == VisitPunctuality.noShow ? false : _paidInFull,
-			hadBehaviorIssues:
-				punctuality == VisitPunctuality.noShow ? false : _hadBehaviorIssues,
-			wasUnfriendly: _hadBehaviorIssues && _wasUnfriendly,
-			hadScandal: _hadBehaviorIssues && _hadScandal,
-			threatenedComplaints: _hadBehaviorIssues && _threatenedComplaints,
-			demandedDiscount: _hadBehaviorIssues && _demandedDiscount,
-			stoleFromSalon: _hadBehaviorIssues && _stoleFromSalon,
-			leftTips: punctuality == VisitPunctuality.noShow ? false : _leftTips,
+			paidInFull: punctuality == VisitPunctuality.noShow ? false : _paidInFull!,
+			hadBehaviorIssues: hadBehaviorIssues,
+			wasUnfriendly: hadBehaviorIssues && _wasUnfriendly,
+			hadScandal: hadBehaviorIssues && _hadScandal,
+			threatenedComplaints: hadBehaviorIssues && _threatenedComplaints,
+			demandedDiscount: hadBehaviorIssues && _demandedDiscount,
+			stoleFromSalon: hadBehaviorIssues && _stoleFromSalon,
+			leftTips: punctuality == VisitPunctuality.noShow ? false : _leftTips!,
 			comment: comment.isEmpty ? null : comment,
 		);
 
@@ -185,8 +256,9 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 	Widget build(BuildContext context) {
 		final appointment = widget.appointment;
 		final profile = ClientProfileService.profileFor(appointment);
-		final showVisitDetails = _punctuality != VisitPunctuality.noShow;
-		final showBehaviorDetails = showVisitDetails && _hadBehaviorIssues;
+		final showVisitDetails = _punctuality != null &&
+			_punctuality != VisitPunctuality.noShow;
+		final showBehaviorDetails = showVisitDetails && (_hadBehaviorIssues ?? false);
 
 		return SafeArea(
 			child: Column(
@@ -197,7 +269,9 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 						onBack: () => Navigator.of(context).pop(),
 					),
 					Expanded(
-						child: SingleChildScrollView(
+						child: _isLoading
+							? const Center(child: CircularProgressIndicator())
+							: SingleChildScrollView(
 							padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
 							child: Column(
 								crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -230,10 +304,16 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 											selected: _punctuality,
 											onChanged: (value) {
 												setState(() {
+													final wasNoShow =
+														_punctuality == VisitPunctuality.noShow;
 													_punctuality = value;
 													_errorText = null;
 													if (value == VisitPunctuality.noShow) {
 														_clearVisitDetails();
+													} else if (wasNoShow &&
+														_useDefaults &&
+														_paidInFull == null) {
+														_applyDefaultVisitDetails();
 													}
 												});
 											},

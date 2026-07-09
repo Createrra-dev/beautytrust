@@ -7,6 +7,7 @@ _DEFAULT_SETTINGS: dict[str, bool] = {
 	"push_notifications_enabled": True,
 	"email_notifications_enabled": True,
 	"marketing_notifications_enabled": False,
+	"visit_result_defaults_enabled": True,
 }
 
 
