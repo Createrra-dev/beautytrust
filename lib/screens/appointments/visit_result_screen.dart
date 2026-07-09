@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/appointment_record.dart';
 import '../../models/client_profile.dart';
 import '../../models/visit_result.dart';
+import '../../navigation/main_shell_navigation.dart';
 import '../../services/client_profile_service.dart';
 import '../../services/dashboard_data_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_snack_bar.dart';
 
 class VisitResultScreen extends StatefulWidget {
 	const VisitResultScreen({
@@ -26,6 +28,16 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 	bool? _leftTips;
 	final _commentController = TextEditingController();
 	String? _errorText;
+	var _isSaving = false;
+
+	double? get _previewRating {
+		return calculateVisitResultRating(
+			punctuality: _punctuality,
+			paidInFull: _paidInFull,
+			hadScandal: _hadScandal,
+			leftTips: _leftTips,
+		);
+	}
 
 	@override
 	void initState() {
@@ -47,6 +59,10 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 	}
 
 	void _save() async {
+		if (_isSaving) {
+			return;
+		}
+
 		final punctuality = _punctuality;
 		final paidInFull = _paidInFull;
 		final hadScandal = _hadScandal;
@@ -83,8 +99,75 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 			comment: comment.isEmpty ? null : comment,
 		);
 
-		await DashboardDataService.saveVisitResult(widget.appointment.id, visitResult);
-		Navigator.of(context).pop(true);
+		setState(() => _isSaving = true);
+
+		try {
+			await DashboardDataService.saveVisitResult(
+				widget.appointment.id,
+				visitResult,
+			);
+			if (!mounted) {
+				return;
+			}
+
+			final messenger = ScaffoldMessenger.of(context);
+			MainShellNavigation.instance.goToHome();
+			Navigator.of(context).popUntil((route) => route.isFirst);
+			messenger.hideCurrentSnackBar();
+			messenger.showSnackBar(
+				SnackBar(
+					behavior: SnackBarBehavior.floating,
+					backgroundColor: Colors.transparent,
+					elevation: 0,
+					margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+					padding: EdgeInsets.zero,
+					content: Container(
+						padding: const EdgeInsets.symmetric(
+							horizontal: 14,
+							vertical: 12,
+						),
+						decoration: BoxDecoration(
+							color: AppColors.surfaceElevated,
+							borderRadius: BorderRadius.circular(12),
+							border: Border.all(
+								color: AppColors.secondary.withValues(alpha: 0.45),
+							),
+						),
+						child: const Row(
+							children: [
+								Icon(
+									Icons.check_circle_outline_rounded,
+									color: AppColors.secondary,
+									size: 20,
+								),
+								SizedBox(width: 10),
+								Expanded(
+									child: Text(
+										'Результат визита сохранён',
+										style: TextStyle(
+											color: AppColors.textPrimary,
+											fontSize: 14,
+											fontWeight: FontWeight.w500,
+											height: 1.35,
+										),
+									),
+								),
+							],
+						),
+					),
+				),
+			);
+		} catch (error) {
+			if (!mounted) {
+				return;
+			}
+			setState(() => _isSaving = false);
+			AppSnackBar.show(
+				context,
+				'Не удалось сохранить результат визита',
+				type: AppSnackBarType.error,
+			);
+		}
 	}
 
 	@override
@@ -112,6 +195,8 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 										appointment: appointment,
 										profile: profile,
 									),
+									const SizedBox(height: 12),
+									_VisitRatingCard(rating: _previewRating),
 									const SizedBox(height: 16),
 									_VisitQuestionCard(
 										title: 'Пунктуальность',
@@ -225,8 +310,17 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 					Padding(
 						padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
 						child: FilledButton(
-							onPressed: _save,
-							child: const Text('Сохранить результат'),
+							onPressed: _isSaving ? null : _save,
+							child: _isSaving
+								? const SizedBox(
+									width: 22,
+									height: 22,
+									child: CircularProgressIndicator(
+										strokeWidth: 2,
+										color: AppColors.textPrimary,
+									),
+								)
+								: const Text('Сохранить результат'),
 						),
 					),
 				],
@@ -267,6 +361,115 @@ class _PageHeader extends StatelessWidget {
 								fontWeight: FontWeight.w600,
 							),
 						),
+					),
+				],
+			),
+		);
+	}
+}
+
+class _VisitRatingCard extends StatelessWidget {
+	const _VisitRatingCard({required this.rating});
+
+	final double? rating;
+
+	@override
+	Widget build(BuildContext context) {
+		if (rating == null) {
+			return Container(
+				padding: const EdgeInsets.all(16),
+				decoration: BoxDecoration(
+					color: AppColors.surface,
+					borderRadius: BorderRadius.circular(16),
+					border: Border.all(color: AppColors.border),
+				),
+				child: const Column(
+					crossAxisAlignment: CrossAxisAlignment.start,
+					children: [
+						Text(
+							'Оценка визита',
+							style: TextStyle(
+								color: AppColors.textPrimary,
+								fontSize: 16,
+								fontWeight: FontWeight.w700,
+							),
+						),
+						SizedBox(height: 6),
+						Text(
+							'Ответьте на вопросы — оценка появится автоматически',
+							style: TextStyle(
+								color: AppColors.textMuted,
+								fontSize: 13,
+							),
+						),
+					],
+				),
+			);
+		}
+
+		final ratingColor = appointmentRatingColor(rating!);
+		final ratingLabel = appointmentRatingLabel(rating!);
+
+		return Container(
+			padding: const EdgeInsets.all(16),
+			decoration: BoxDecoration(
+				color: AppColors.surface,
+				borderRadius: BorderRadius.circular(16),
+				border: Border.all(color: ratingColor.withValues(alpha: 0.45)),
+			),
+			child: Row(
+				children: [
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								const Text(
+									'Оценка визита',
+									style: TextStyle(
+										color: AppColors.textMuted,
+										fontSize: 13,
+									),
+								),
+								const SizedBox(height: 4),
+								Text(
+									ratingLabel,
+									style: TextStyle(
+										color: ratingColor,
+										fontSize: 15,
+										fontWeight: FontWeight.w600,
+									),
+								),
+							],
+						),
+					),
+					Row(
+						mainAxisSize: MainAxisSize.min,
+						children: [
+							Icon(
+								Icons.star_rounded,
+								color: ratingColor,
+								size: 28,
+							),
+							const SizedBox(width: 4),
+							Text(
+								formatAppointmentRating(rating!),
+								style: TextStyle(
+									color: ratingColor,
+									fontSize: 32,
+									fontWeight: FontWeight.w700,
+									height: 1,
+								),
+							),
+							const SizedBox(width: 4),
+							Text(
+								'/ 5',
+								style: TextStyle(
+									color: ratingColor.withValues(alpha: 0.75),
+									fontSize: 16,
+									fontWeight: FontWeight.w600,
+								),
+							),
+						],
 					),
 				],
 			),
