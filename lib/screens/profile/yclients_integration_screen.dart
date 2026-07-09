@@ -69,10 +69,18 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 				return;
 			}
 			setState(() {
-				_error = error.toString();
+				_error = _formatLoadError(error);
 				_isLoading = false;
 			});
 		}
+	}
+
+	String _formatLoadError(Object error) {
+		if (error is ApiException && error.statusCode == 404) {
+			return 'Интеграция YClients ещё не развёрнута на сервере.\n'
+				'Нужно обновить backend на apis.beautytrust.ru.';
+		}
+		return error.toString();
 	}
 
 	Future<void> _save() async {
@@ -197,13 +205,17 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 					Expanded(
 						child: _isLoading
 							? const Center(child: CircularProgressIndicator())
-							: _error != null
-								? Center(
-									child: Text(
-										_error!,
-										style: const TextStyle(color: AppColors.error),
-									),
-								)
+								: _error != null
+									? Center(
+										child: Padding(
+											padding: const EdgeInsets.symmetric(horizontal: 24),
+											child: Text(
+												_error!,
+												textAlign: TextAlign.center,
+												style: const TextStyle(color: AppColors.error),
+											),
+										),
+									)
 								: ListView(
 									padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
 									children: [
