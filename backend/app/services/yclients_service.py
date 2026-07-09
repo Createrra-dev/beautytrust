@@ -5,8 +5,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from pathlib import Path
-
 import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
