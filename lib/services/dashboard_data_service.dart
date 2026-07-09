@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/appointment_record.dart';
+import '../models/appointment_time_filter.dart';
 import '../models/dashboard_period.dart';
 import '../models/dashboard_stats.dart';
 import '../models/visit_result.dart';
@@ -63,7 +64,46 @@ class DashboardDataService extends ChangeNotifier {
 	}
 
 	static List<AppointmentRecord> currentAppointments() {
-		return List<AppointmentRecord>.from(instance._appointments);
+		return activeAppointments();
+	}
+
+	static List<AppointmentRecord> activeAppointments({DateTime? referenceNow}) {
+		final now = referenceNow ?? DateTime.now();
+		final items = instance._appointments
+			.where((appointment) => appointment.isActiveAt(now))
+			.toList()
+			..sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
+		return items;
+	}
+
+	static List<AppointmentRecord> appointmentsFor(
+		AppointmentTimeFilter filter, {
+		DateTime? referenceNow,
+	}) {
+		final now = referenceNow ?? DateTime.now();
+		final Iterable<AppointmentRecord> items = switch (filter) {
+			AppointmentTimeFilter.all => instance._appointments,
+			AppointmentTimeFilter.past => instance._appointments.where(
+				(appointment) => appointment.isPastAt(now),
+			),
+			AppointmentTimeFilter.active => instance._appointments.where(
+				(appointment) => appointment.isActiveAt(now),
+			),
+		};
+
+		final result = items.toList();
+		if (filter == AppointmentTimeFilter.past) {
+			result.sort((left, right) => right.scheduledAt.compareTo(left.scheduledAt));
+			return result;
+		}
+
+		if (filter == AppointmentTimeFilter.active) {
+			result.sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
+			return result;
+		}
+
+		result.sort((left, right) => right.scheduledAt.compareTo(left.scheduledAt));
+		return result;
 	}
 
 	static Future<void> syncFromApi() async {

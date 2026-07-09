@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/appointment_record.dart';
 import '../appointments/appointment_detail_screen.dart';
+import '../appointments/appointments_list_screen.dart';
 import 'home_screen.dart';
 
 class HomeTabNavigator extends StatelessWidget {
@@ -17,6 +18,13 @@ class HomeTabNavigator extends StatelessWidget {
 						builder: (context) => AppointmentDetailScreen(
 							appointment: settings.arguments! as AppointmentRecord,
 						),
+					);
+				}
+
+				if (settings.name == AppointmentsListScreen.routeName) {
+					return MaterialPageRoute(
+						settings: settings,
+						builder: (context) => const AppointmentsListScreen(),
 					);
 				}
 

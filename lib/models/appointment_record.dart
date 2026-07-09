@@ -103,6 +103,14 @@ class AppointmentRecord {
 		};
 	}
 
+	bool isActiveAt(DateTime referenceNow) {
+		return !scheduledAt.isBefore(referenceNow);
+	}
+
+	bool isPastAt(DateTime referenceNow) {
+		return scheduledAt.isBefore(referenceNow);
+	}
+
 	String get verifiedLabel {
 		if (daysSinceVerified <= 0) {
 			return 'Проверен сегодня';
