@@ -30,7 +30,6 @@ class Master(Base):
 	yclients_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	yclients_partner_token: Mapped[str | None] = mapped_column(String(200), nullable=True)
 	yclients_company_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
-	yclients_form_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
 	yclients_user_token: Mapped[str | None] = mapped_column(String(200), nullable=True)
 	yclients_login: Mapped[str | None] = mapped_column(String(200), nullable=True)
 	yclients_last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

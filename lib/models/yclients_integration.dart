@@ -3,7 +3,6 @@ class YClientsIntegration {
 		required this.enabled,
 		required this.partnerToken,
 		required this.companyId,
-		required this.formId,
 		required this.login,
 		required this.hasUserToken,
 		this.lastSyncAt,
@@ -13,7 +12,6 @@ class YClientsIntegration {
 	final bool enabled;
 	final String partnerToken;
 	final String companyId;
-	final String formId;
 	final String login;
 	final bool hasUserToken;
 	final DateTime? lastSyncAt;
@@ -23,7 +21,6 @@ class YClientsIntegration {
 		bool? enabled,
 		String? partnerToken,
 		String? companyId,
-		String? formId,
 		String? login,
 		bool? hasUserToken,
 		DateTime? lastSyncAt,
@@ -33,7 +30,6 @@ class YClientsIntegration {
 			enabled: enabled ?? this.enabled,
 			partnerToken: partnerToken ?? this.partnerToken,
 			companyId: companyId ?? this.companyId,
-			formId: formId ?? this.formId,
 			login: login ?? this.login,
 			hasUserToken: hasUserToken ?? this.hasUserToken,
 			lastSyncAt: lastSyncAt ?? this.lastSyncAt,

@@ -673,8 +673,6 @@ async def update_yclients_integration(
 		master.yclients_partner_token = updates["partner_token"].strip() or None
 	if "company_id" in updates and updates["company_id"] is not None:
 		master.yclients_company_id = updates["company_id"].strip() or None
-	if "form_id" in updates and updates["form_id"] is not None:
-		master.yclients_form_id = updates["form_id"].strip() or None
 	if "login" in updates and updates["login"] is not None:
 		master.yclients_login = updates["login"].strip() or None
 

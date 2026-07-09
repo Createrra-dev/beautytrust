@@ -494,7 +494,6 @@ class AppApiRepository {
 		bool? enabled,
 		String? partnerToken,
 		String? companyId,
-		String? formId,
 		String? login,
 		String? password,
 	}) async {
@@ -507,9 +506,6 @@ class AppApiRepository {
 		}
 		if (companyId != null) {
 			body['company_id'] = companyId;
-		}
-		if (formId != null) {
-			body['form_id'] = formId;
 		}
 		if (login != null) {
 			body['login'] = login;
@@ -752,7 +748,6 @@ class AppApiRepository {
 			enabled: json['enabled'] as bool? ?? false,
 			partnerToken: json['partner_token'] as String? ?? '',
 			companyId: json['company_id'] as String? ?? '',
-			formId: json['form_id'] as String? ?? '',
 			login: json['login'] as String? ?? '',
 			hasUserToken: json['has_user_token'] as bool? ?? false,
 			lastSyncAt: lastSyncRaw == null ? null : DateTime.parse(lastSyncRaw).toLocal(),

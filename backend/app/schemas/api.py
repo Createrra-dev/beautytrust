@@ -38,7 +38,6 @@ class YClientsIntegrationSchema(BaseModel):
 	enabled: bool = False
 	partner_token: str = ""
 	company_id: str = ""
-	form_id: str = ""
 	login: str = ""
 	has_user_token: bool = False
 	last_sync_at: datetime | None = None
@@ -49,7 +48,6 @@ class YClientsIntegrationUpdateRequest(BaseModel):
 	enabled: bool | None = None
 	partner_token: str | None = None
 	company_id: str | None = None
-	form_id: str | None = None
 	login: str | None = None
 	password: str | None = None
 

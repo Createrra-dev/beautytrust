@@ -20,7 +20,6 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 	final _api = AppApiRepository();
 	final _partnerTokenController = TextEditingController();
 	final _companyIdController = TextEditingController();
-	final _formIdController = TextEditingController();
 	final _loginController = TextEditingController();
 	final _passwordController = TextEditingController();
 
@@ -41,7 +40,6 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 	void dispose() {
 		_partnerTokenController.dispose();
 		_companyIdController.dispose();
-		_formIdController.dispose();
 		_loginController.dispose();
 		_passwordController.dispose();
 		super.dispose();
@@ -63,7 +61,6 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 				_enabled = integration.enabled;
 				_partnerTokenController.text = integration.partnerToken;
 				_companyIdController.text = integration.companyId;
-				_formIdController.text = integration.formId;
 				_loginController.text = integration.login;
 				_isLoading = false;
 			});
@@ -90,7 +87,6 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 				enabled: _enabled,
 				partnerToken: _partnerTokenController.text.trim(),
 				companyId: _companyIdController.text.trim(),
-				formId: _formIdController.text.trim(),
 				login: _loginController.text.trim(),
 				password: _passwordController.text.trim().isEmpty
 					? null
@@ -242,13 +238,6 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 														controller: _companyIdController,
 														label: 'Company ID (CID)',
 														hint: '40430',
-														keyboardType: TextInputType.number,
-													),
-													const SizedBox(height: 12),
-													_buildField(
-														controller: _formIdController,
-														label: 'Form ID (FID)',
-														hint: '155219',
 														keyboardType: TextInputType.number,
 													),
 													const SizedBox(height: 12),

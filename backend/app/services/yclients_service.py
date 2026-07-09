@@ -289,7 +289,6 @@ def yclients_integration_schema(master: models.Master) -> dict[str, Any]:
 		"enabled": master.yclients_enabled,
 		"partner_token": master.yclients_partner_token or "",
 		"company_id": master.yclients_company_id or "",
-		"form_id": master.yclients_form_id or "",
 		"login": master.yclients_login or "",
 		"has_user_token": bool(master.yclients_user_token),
 		"last_sync_at": master.yclients_last_sync_at,
