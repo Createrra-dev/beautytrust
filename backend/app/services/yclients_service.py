@@ -178,10 +178,32 @@ def _format_duration_label(seconds: int | None) -> str:
 
 def _parse_record_datetime(record: dict[str, Any]) -> datetime | None:
 	datetime_value = record.get("datetime")
+	if isinstance(datetime_value, str) and datetime_value.strip():
+		try:
+			return datetime.fromisoformat(
+				datetime_value.strip().replace("Z", "+00:00"),
+			).astimezone(timezone.utc)
+		except ValueError:
+			pass
+
 	if isinstance(datetime_value, (int, float)) and datetime_value > 0:
 		return datetime.fromtimestamp(datetime_value, tz=MOSCOW_TZ).astimezone(timezone.utc)
 
 	date_value = record.get("date")
+	if isinstance(date_value, str) and date_value.strip():
+		normalized = date_value.strip().replace("Z", "+00:00")
+		try:
+			return datetime.fromisoformat(normalized).astimezone(timezone.utc)
+		except ValueError:
+			for date_format in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+				try:
+					parsed = datetime.strptime(normalized, date_format)
+					if date_format == "%Y-%m-%d":
+						parsed = parsed.replace(hour=12)
+					return parsed.replace(tzinfo=MOSCOW_TZ).astimezone(timezone.utc)
+				except ValueError:
+					continue
+
 	if isinstance(date_value, (int, float)) and date_value > 0:
 		return datetime.fromtimestamp(date_value, tz=MOSCOW_TZ).astimezone(timezone.utc)
 

@@ -193,7 +193,8 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 			setState(() => _isSyncing = false);
 			AppSnackBar.show(
 				context,
-				'Синхронизация: ${result.imported} новых, ${result.updated} обновлено',
+				'Синхронизация: ${result.imported} новых, ${result.updated} обновлено'
+					'${result.skipped > 0 ? ', ${result.skipped} пропущено' : ''}',
 				type: AppSnackBarType.success,
 			);
 		} on ApiException catch (error) {
