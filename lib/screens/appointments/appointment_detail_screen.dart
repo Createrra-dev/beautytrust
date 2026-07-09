@@ -26,11 +26,14 @@ class AppointmentDetailScreen extends StatefulWidget {
 
 class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 	final _dashboardService = DashboardDataService.instance;
+	ClientProfile? _profile;
+	var _isLoadingProfile = true;
 
 	@override
 	void initState() {
 		super.initState();
 		_dashboardService.addListener(_onDashboardChanged);
+		_loadProfile();
 	}
 
 	@override
@@ -39,7 +42,34 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 		super.dispose();
 	}
 
+	Future<void> _loadProfile() async {
+		final appointment = _appointment;
+		setState(() => _isLoadingProfile = true);
+
+		try {
+			final profile = await ClientProfileService.fetchProfileForPhone(
+				appointment.clientPhoneDigits,
+			);
+			if (!mounted) {
+				return;
+			}
+			setState(() {
+				_profile = profile ?? ClientProfileService.profileFor(appointment);
+				_isLoadingProfile = false;
+			});
+		} catch (_) {
+			if (!mounted) {
+				return;
+			}
+			setState(() {
+				_profile = ClientProfileService.profileFor(appointment);
+				_isLoadingProfile = false;
+			});
+		}
+	}
+
 	void _onDashboardChanged() {
+		_loadProfile();
 		setState(() {});
 	}
 
@@ -137,7 +167,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 	@override
 	Widget build(BuildContext context) {
 		final appointment = _appointment;
-		final profile = ClientProfileService.profileFor(appointment);
+		final profile = _profile ?? ClientProfileService.profileFor(appointment);
 		final ratingColor = appointmentRatingColor(profile.reviewsAverage);
 
 		return SafeArea(
@@ -170,7 +200,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 					),
 					const SizedBox(height: 12),
 					Expanded(
-						child: SingleChildScrollView(
+						child: _isLoadingProfile
+							? const Center(child: CircularProgressIndicator())
+							: SingleChildScrollView(
 							padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
 							child: Container(
 								padding: const EdgeInsets.all(16),
@@ -610,12 +642,21 @@ class _ReviewsSection extends StatelessWidget {
 					],
 				),
 				const SizedBox(height: 12),
-				...reviews.map(
-					(review) => Padding(
-						padding: const EdgeInsets.only(bottom: 8),
-						child: MasterReviewCard(review: review),
+				if (reviews.isEmpty)
+					const Text(
+						'Пока нет отзывов от мастеров',
+						style: TextStyle(
+							color: AppColors.textMuted,
+							fontSize: 14,
+						),
+					)
+				else
+					...reviews.map(
+						(review) => Padding(
+							padding: const EdgeInsets.only(bottom: 8),
+							child: MasterReviewCard(review: review),
+						),
 					),
-				),
 			],
 		);
 	}

@@ -113,6 +113,11 @@ class AppApiRepository {
 		}
 	}
 
+	Future<ClientProfile> fetchClientProfile(String phoneDigits) async {
+		final json = await _api.getJson('/api/clients/$phoneDigits');
+		return _clientProfileFromJson(json);
+	}
+
 	Future<List<CheckHistoryRecord>> fetchCheckHistory({
 		CheckHistoryFilter filter = CheckHistoryFilter.all,
 	}) async {
@@ -598,30 +603,35 @@ class AppApiRepository {
 
 	ClientCheckResult _clientCheckFromJson(Map<String, dynamic> json) {
 		final profileJson = json['profile'] as Map<String, dynamic>;
+		return ClientCheckResult(
+			clientName: json['client_name'] as String,
+			profile: _clientProfileFromJson(profileJson),
+		);
+	}
+
+	ClientProfile _clientProfileFromJson(Map<String, dynamic> profileJson) {
 		final reviews = (profileJson['reviews'] as List<dynamic>).map((item) {
 			final review = item as Map<String, dynamic>;
+			final rating = (review['rating'] as num).toDouble();
 			return MasterReview(
 				masterName: review['author_name'] as String,
-				rating: (review['rating'] as num).toDouble(),
+				rating: rating,
 				text: review['text'] as String,
-				tag: 'отзыв',
+				tag: appointmentRatingLabel(rating),
 				ratedAt: DateTime(review['review_year'] as int, review['review_month'] as int),
 			);
 		}).toList();
 
-		return ClientCheckResult(
-			clientName: json['client_name'] as String,
-			profile: ClientProfile(
-				phone: profileJson['phone'] as String,
-				ratingLabel: profileJson['rating_label'] as String,
-				reviewsAverage: (profileJson['reviews_average'] as num).toDouble(),
-				reviewsCount: profileJson['reviews_count'] as int,
-				noShowsCount: profileJson['no_shows_count'] as int,
-				scandalsCount: profileJson['scandals_count'] as int,
-				reviews: reviews,
-				reliabilityTitle: profileJson['reliability_title'] as String,
-				reliabilitySubtitle: profileJson['reliability_subtitle'] as String,
-			),
+		return ClientProfile(
+			phone: profileJson['phone'] as String,
+			ratingLabel: profileJson['rating_label'] as String,
+			reviewsAverage: (profileJson['reviews_average'] as num).toDouble(),
+			reviewsCount: profileJson['reviews_count'] as int,
+			noShowsCount: profileJson['no_shows_count'] as int,
+			scandalsCount: profileJson['scandals_count'] as int,
+			reviews: reviews,
+			reliabilityTitle: profileJson['reliability_title'] as String,
+			reliabilitySubtitle: profileJson['reliability_subtitle'] as String,
 		);
 	}
 

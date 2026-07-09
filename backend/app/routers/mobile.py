@@ -125,7 +125,11 @@ def _profile_schema(profile: models.ClientProfile) -> ClientProfileSchema:
 				review_month=review.review_month,
 				review_year=review.review_year,
 			)
-			for review in profile.reviews
+			for review in sorted(
+				profile.reviews,
+				key=lambda item: (item.review_year, item.review_month),
+				reverse=True,
+			)
 		],
 		reliability_title=profile.reliability_title,
 		reliability_subtitle=profile.reliability_subtitle,
@@ -1005,6 +1009,28 @@ async def save_visit_result(
 	db.refresh(appointment)
 	_invalidate_dashboard_cache(master.id)
 	return _appointment_schema(appointment)
+
+
+@router.get("/clients/{phone}", response_model=ClientProfileSchema)
+async def get_client_profile(
+	phone: str,
+	db: Session = Depends(get_db),
+	master: models.Master = Depends(get_current_master),
+) -> ClientProfileSchema:
+	try:
+		digits = normalize_phone_digits(phone)
+	except ValueError as error:
+		raise HTTPException(status_code=400, detail=str(error)) from error
+
+	profile = db.scalar(
+		select(models.ClientProfile)
+		.options(joinedload(models.ClientProfile.reviews))
+		.where(models.ClientProfile.phone_digits == digits)
+	)
+	if profile is None:
+		raise HTTPException(status_code=404, detail="Client not found")
+
+	return _profile_schema(profile)
 
 
 @router.post(

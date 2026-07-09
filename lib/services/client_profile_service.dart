@@ -1,9 +1,9 @@
-import '../data/demo_master_reviews.dart';
-import '../services/api/app_api_repository.dart';
 import '../models/appointment_record.dart';
 import '../models/client_check_result.dart';
 import '../models/client_profile.dart';
+import '../services/api/app_api_repository.dart';
 import '../utils/phone_formatter.dart';
+import 'api/beauty_trust_api.dart';
 
 class ClientProfileService {
 	ClientProfileService._();
@@ -12,7 +12,29 @@ class ClientProfileService {
 	static final Map<String, ClientProfile> _profileCache = {};
 
 	static Future<ClientCheckResult?> lookupByPhone(String rawPhone) async {
-		return _api.checkClient(rawPhone);
+		final result = await _api.checkClient(rawPhone);
+		if (result != null) {
+			cacheProfile(_phoneDigitsFromDisplay(result.profile.phone), result.profile);
+		}
+		return result;
+	}
+
+	static Future<ClientProfile?> fetchProfileForPhone(String phoneDigits) async {
+		final cached = _profileCache[phoneDigits];
+		if (cached != null) {
+			return cached;
+		}
+
+		try {
+			final profile = await _api.fetchClientProfile(phoneDigits);
+			_profileCache[phoneDigits] = profile;
+			return profile;
+		} on ApiException catch (error) {
+			if (error.statusCode == 404) {
+				return null;
+			}
+			rethrow;
+		}
 	}
 
 	static ClientProfile profileFor(AppointmentRecord appointment) {
@@ -34,22 +56,29 @@ class ClientProfileService {
 
 	static ClientProfile _profileFromAppointment(AppointmentRecord appointment) {
 		final ratingLabel = _ratingLabel(appointment.clientRating);
-		final reviews = DemoMasterReviews.ekaterina;
 		final phone = appointment.clientPhoneDigits.length == 10
 			? formatPhoneDisplay(appointment.clientPhoneDigits)
-			: '+7 (999) 000-00-00';
+			: appointment.clientPhoneDigits;
 
 		return ClientProfile(
 			phone: phone,
 			ratingLabel: ratingLabel,
 			reviewsAverage: appointment.clientRating,
-			reviewsCount: reviews.length,
+			reviewsCount: 0,
 			noShowsCount: appointment.riskLevel == AppointmentRiskLevel.high ? 2 : 0,
 			scandalsCount: appointment.riskLevel == AppointmentRiskLevel.high ? 1 : 0,
-			reviews: reviews,
+			reviews: const [],
 			reliabilityTitle: _reliabilityTitle(appointment.clientRating),
 			reliabilitySubtitle: _reliabilitySubtitle(appointment.clientRating),
 		);
+	}
+
+	static String _phoneDigitsFromDisplay(String phone) {
+		final digits = phone.replaceAll(RegExp(r'\D'), '');
+		if (digits.length == 11 && digits.startsWith('7')) {
+			return digits.substring(1);
+		}
+		return digits;
 	}
 
 	static String _ratingLabel(double rating) {

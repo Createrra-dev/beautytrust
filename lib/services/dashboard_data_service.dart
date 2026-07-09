@@ -136,6 +136,11 @@ class DashboardDataService extends ChangeNotifier {
 	static Future<void> saveVisitResult(String appointmentId, VisitResult visitResult) async {
 		final updated = await _api.saveVisitResult(appointmentId, visitResult);
 		ClientProfileService.invalidateCache(updated.clientPhoneDigits);
+		try {
+			await ClientProfileService.fetchProfileForPhone(updated.clientPhoneDigits);
+		} catch (_) {
+			// Profile will be loaded on next screen open.
+		}
 		final appointmentIndex = instance._appointments.indexWhere(
 			(appointment) => appointment.id == appointmentId,
 		);
