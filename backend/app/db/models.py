@@ -32,6 +32,8 @@ class Master(Base):
 	yclients_company_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
 	yclients_user_token: Mapped[str | None] = mapped_column(String(200), nullable=True)
 	yclients_login: Mapped[str | None] = mapped_column(String(200), nullable=True)
+	yclients_auth_uuid: Mapped[str | None] = mapped_column(String(100), nullable=True)
+	yclients_auth_recipient: Mapped[str | None] = mapped_column(String(120), nullable=True)
 	yclients_last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	yclients_last_sync_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	phone_digits: Mapped[str | None] = mapped_column(String(10), nullable=True, unique=True, index=True)

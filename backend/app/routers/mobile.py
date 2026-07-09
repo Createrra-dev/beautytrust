@@ -64,6 +64,7 @@ from app.services.uploads import avatar_url_for, uploads_root
 from app.services.yclients_service import (
 	YClientsError,
 	authenticate_user,
+	confirm_authentication,
 	sync_yclients_appointments,
 	yclients_integration_schema,
 )
@@ -666,9 +667,13 @@ async def update_yclients_integration(
 ) -> YClientsIntegrationSchema:
 	updates = body.model_dump(exclude_unset=True)
 	password = updates.pop("password", None)
+	auth_code = updates.pop("auth_code", None)
 
 	if "enabled" in updates and updates["enabled"] is not None:
 		master.yclients_enabled = bool(updates["enabled"])
+		if not master.yclients_enabled:
+			master.yclients_auth_uuid = None
+			master.yclients_auth_recipient = None
 	if "partner_token" in updates and updates["partner_token"] is not None:
 		master.yclients_partner_token = updates["partner_token"].strip() or None
 	if "company_id" in updates and updates["company_id"] is not None:
@@ -676,13 +681,39 @@ async def update_yclients_integration(
 	if "login" in updates and updates["login"] is not None:
 		master.yclients_login = updates["login"].strip() or None
 
-	if password and master.yclients_login and master.yclients_partner_token:
+	if auth_code and master.yclients_login and master.yclients_partner_token:
+		if not password:
+			raise HTTPException(
+				status_code=400,
+				detail="Введите пароль YClients для подтверждения кода",
+			)
 		try:
-			master.yclients_user_token = authenticate_user(
+			master.yclients_user_token = confirm_authentication(
+				master.yclients_partner_token,
+				master.yclients_login,
+				password,
+				auth_code,
+				uuid=master.yclients_auth_uuid,
+			)
+			master.yclients_auth_uuid = None
+			master.yclients_auth_recipient = None
+		except YClientsError as error:
+			raise HTTPException(status_code=400, detail=error.message) from error
+	elif password and master.yclients_login and master.yclients_partner_token:
+		try:
+			auth_result = authenticate_user(
 				master.yclients_partner_token,
 				master.yclients_login,
 				password,
 			)
+			if auth_result.user_token:
+				master.yclients_user_token = auth_result.user_token
+				master.yclients_auth_uuid = None
+				master.yclients_auth_recipient = None
+			elif auth_result.auth_pending:
+				master.yclients_user_token = None
+				master.yclients_auth_uuid = auth_result.auth_uuid
+				master.yclients_auth_recipient = auth_result.auth_recipient
 		except YClientsError as error:
 			raise HTTPException(status_code=400, detail=error.message) from error
 
@@ -692,7 +723,7 @@ async def update_yclients_integration(
 				status_code=400,
 				detail="Укажите Partner Token и Company ID",
 			)
-		if not master.yclients_user_token:
+		if not master.yclients_user_token and not master.yclients_auth_uuid:
 			raise HTTPException(
 				status_code=400,
 				detail="Укажите логин и пароль YClients для получения User Token",
@@ -702,7 +733,7 @@ async def update_yclients_integration(
 	db.commit()
 	db.refresh(master)
 
-	if master.yclients_enabled:
+	if master.yclients_enabled and master.yclients_user_token:
 		try:
 			sync_yclients_appointments(db, master)
 		except YClientsError as error:

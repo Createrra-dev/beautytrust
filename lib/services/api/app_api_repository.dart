@@ -496,6 +496,7 @@ class AppApiRepository {
 		String? companyId,
 		String? login,
 		String? password,
+		String? authCode,
 	}) async {
 		final body = <String, dynamic>{};
 		if (enabled != null) {
@@ -512,6 +513,9 @@ class AppApiRepository {
 		}
 		if (password != null) {
 			body['password'] = password;
+		}
+		if (authCode != null) {
+			body['auth_code'] = authCode;
 		}
 
 		final json = await _api.patchJson('/api/profile/yclients', body: body);
@@ -750,6 +754,8 @@ class AppApiRepository {
 			companyId: json['company_id'] as String? ?? '',
 			login: json['login'] as String? ?? '',
 			hasUserToken: json['has_user_token'] as bool? ?? false,
+			authPending: json['auth_pending'] as bool? ?? false,
+			authRecipient: json['auth_recipient'] as String? ?? '',
 			lastSyncAt: lastSyncRaw == null ? null : DateTime.parse(lastSyncRaw).toLocal(),
 			lastSyncCount: json['last_sync_count'] as int? ?? 0,
 		);

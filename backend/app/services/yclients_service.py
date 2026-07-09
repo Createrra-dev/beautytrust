@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -37,7 +38,39 @@ def _headers(partner_token: str, user_token: str | None = None) -> dict[str, str
 	}
 
 
-def authenticate_user(partner_token: str, login: str, password: str) -> str:
+@dataclass
+class YClientsAuthResult:
+	user_token: str | None = None
+	auth_pending: bool = False
+	auth_uuid: str | None = None
+	auth_recipient: str | None = None
+	auth_attempts_left: int | None = None
+
+
+def _extract_auth_error(payload: dict[str, Any]) -> str:
+	return (payload.get("meta") or {}).get("message") or "Ошибка авторизации YClients"
+
+
+def _parse_auth_response(payload: dict[str, Any]) -> YClientsAuthResult:
+	data = payload.get("data") or {}
+	user_token = data.get("user_token")
+	if user_token:
+		return YClientsAuthResult(user_token=str(user_token))
+
+	auth_uuid = data.get("uuid")
+	if auth_uuid:
+		transport = data.get("transport") or {}
+		return YClientsAuthResult(
+			auth_pending=True,
+			auth_uuid=str(auth_uuid),
+			auth_recipient=str(transport.get("recipient") or "").strip() or None,
+			auth_attempts_left=data.get("attempts_left"),
+		)
+
+	raise YClientsError(_extract_auth_error(payload))
+
+
+def authenticate_user(partner_token: str, login: str, password: str) -> YClientsAuthResult:
 	response = httpx.post(
 		f"{YCLIENTS_API_BASE}/auth",
 		headers=_headers(partner_token),
@@ -46,13 +79,40 @@ def authenticate_user(partner_token: str, login: str, password: str) -> str:
 	)
 	payload = response.json()
 	if response.status_code >= 400 or not payload.get("success"):
-		message = (payload.get("meta") or {}).get("message") or "Ошибка авторизации YClients"
-		raise YClientsError(message)
+		raise YClientsError(_extract_auth_error(payload))
+	return _parse_auth_response(payload)
 
-	user_token = (payload.get("data") or {}).get("user_token")
-	if not user_token:
-		raise YClientsError("YClients не вернул user_token")
-	return str(user_token)
+
+def confirm_authentication(
+	partner_token: str,
+	login: str,
+	password: str,
+	auth_code: str,
+	*,
+	uuid: str | None = None,
+) -> str:
+	body: dict[str, str] = {
+		"login": login,
+		"password": password,
+		"code": auth_code.strip(),
+	}
+	if uuid:
+		body["uuid"] = uuid
+
+	response = httpx.post(
+		f"{YCLIENTS_API_BASE}/auth",
+		headers=_headers(partner_token),
+		json=body,
+		timeout=30.0,
+	)
+	payload = response.json()
+	if response.status_code >= 400 or not payload.get("success"):
+		raise YClientsError(_extract_auth_error(payload))
+
+	result = _parse_auth_response(payload)
+	if result.user_token:
+		return result.user_token
+	raise YClientsError("YClients не принял код подтверждения")
 
 
 def fetch_records(
@@ -291,6 +351,8 @@ def yclients_integration_schema(master: models.Master) -> dict[str, Any]:
 		"company_id": master.yclients_company_id or "",
 		"login": master.yclients_login or "",
 		"has_user_token": bool(master.yclients_user_token),
+		"auth_pending": bool(master.yclients_auth_uuid),
+		"auth_recipient": master.yclients_auth_recipient or "",
 		"last_sync_at": master.yclients_last_sync_at,
 		"last_sync_count": master.yclients_last_sync_count,
 	}

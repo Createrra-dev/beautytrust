@@ -22,6 +22,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 	final _companyIdController = TextEditingController();
 	final _loginController = TextEditingController();
 	final _passwordController = TextEditingController();
+	final _authCodeController = TextEditingController();
 
 	YClientsIntegration? _integration;
 	var _enabled = false;
@@ -42,6 +43,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 		_companyIdController.dispose();
 		_loginController.dispose();
 		_passwordController.dispose();
+		_authCodeController.dispose();
 		super.dispose();
 	}
 
@@ -88,6 +90,28 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 			return;
 		}
 
+		final authPending = _integration?.authPending ?? false;
+		final authCode = _authCodeController.text.trim();
+		final password = _passwordController.text.trim();
+
+		if (authPending && authCode.isEmpty) {
+			AppSnackBar.show(
+				context,
+				'Введите код подтверждения из письма YClients',
+				type: AppSnackBarType.error,
+			);
+			return;
+		}
+
+		if (authPending && password.isEmpty) {
+			AppSnackBar.show(
+				context,
+				'Введите пароль YClients для подтверждения кода',
+				type: AppSnackBarType.error,
+			);
+			return;
+		}
+
 		setState(() => _isSaving = true);
 
 		try {
@@ -96,15 +120,30 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 				partnerToken: _partnerTokenController.text.trim(),
 				companyId: _companyIdController.text.trim(),
 				login: _loginController.text.trim(),
-				password: _passwordController.text.trim().isEmpty
-					? null
-					: _passwordController.text.trim(),
+				password: password.isEmpty ? null : password,
+				authCode: authCode.isEmpty ? null : authCode,
 			);
 			if (!mounted) {
 				return;
 			}
 
+			if (integration.authPending) {
+				setState(() {
+					_integration = integration;
+					_isSaving = false;
+				});
+				AppSnackBar.show(
+					context,
+					integration.authRecipient.isNotEmpty
+						? 'Код отправлен на ${integration.authRecipient}'
+						: 'Код подтверждения отправлен на email',
+					type: AppSnackBarType.success,
+				);
+				return;
+			}
+
 			_passwordController.clear();
+			_authCodeController.clear();
 			setState(() {
 				_integration = integration;
 				_isSaving = false;
@@ -175,6 +214,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 	@override
 	Widget build(BuildContext context) {
 		final integration = _integration;
+		final authPending = integration?.authPending ?? false;
 
 		return SafeArea(
 			child: Column(
@@ -262,13 +302,41 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 													_buildField(
 														controller: _passwordController,
 														label: 'Пароль YClients',
-														hint: integration?.hasUserToken == true
-															? 'Оставьте пустым, если не меняли'
-															: 'Нужен для получения User Token',
+														hint: authPending
+															? 'Нужен для подтверждения кода'
+															: integration?.hasUserToken == true
+																? 'Оставьте пустым, если не меняли'
+																: 'Нужен для получения User Token',
 														obscureText: true,
 													),
 												],
 											),
+											if (authPending) ...[
+												const SizedBox(height: 16),
+												_SettingsCard(
+													title: 'Подтверждение входа',
+													children: [
+														Text(
+															integration!.authRecipient.isNotEmpty
+																? 'YClients отправил код на ${integration.authRecipient}. '
+																	'Введите его ниже вместе с паролем.'
+																: 'YClients отправил код подтверждения на email. '
+																	'Введите его ниже вместе с паролем.',
+															style: const TextStyle(
+																color: AppColors.textMuted,
+																fontSize: 13,
+															),
+														),
+														const SizedBox(height: 12),
+														_buildField(
+															controller: _authCodeController,
+															label: 'Код из письма',
+															hint: '123456',
+															keyboardType: TextInputType.number,
+														),
+													],
+												),
+											],
 											if (integration != null &&
 												(integration.lastSyncAt != null ||
 													integration.hasUserToken)) ...[
@@ -335,7 +403,7 @@ class _YClientsIntegrationScreenState extends State<YClientsIntegrationScreen> {
 										color: AppColors.textPrimary,
 									),
 								)
-								: const Text('Сохранить'),
+								: Text(authPending ? 'Подтвердить код' : 'Сохранить'),
 						),
 					),
 				],

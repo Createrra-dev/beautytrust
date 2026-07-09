@@ -5,6 +5,8 @@ class YClientsIntegration {
 		required this.companyId,
 		required this.login,
 		required this.hasUserToken,
+		required this.authPending,
+		required this.authRecipient,
 		this.lastSyncAt,
 		required this.lastSyncCount,
 	});
@@ -14,6 +16,8 @@ class YClientsIntegration {
 	final String companyId;
 	final String login;
 	final bool hasUserToken;
+	final bool authPending;
+	final String authRecipient;
 	final DateTime? lastSyncAt;
 	final int lastSyncCount;
 
@@ -23,6 +27,8 @@ class YClientsIntegration {
 		String? companyId,
 		String? login,
 		bool? hasUserToken,
+		bool? authPending,
+		String? authRecipient,
 		DateTime? lastSyncAt,
 		int? lastSyncCount,
 	}) {
@@ -32,6 +38,8 @@ class YClientsIntegration {
 			companyId: companyId ?? this.companyId,
 			login: login ?? this.login,
 			hasUserToken: hasUserToken ?? this.hasUserToken,
+			authPending: authPending ?? this.authPending,
+			authRecipient: authRecipient ?? this.authRecipient,
 			lastSyncAt: lastSyncAt ?? this.lastSyncAt,
 			lastSyncCount: lastSyncCount ?? this.lastSyncCount,
 		);

@@ -40,6 +40,8 @@ class YClientsIntegrationSchema(BaseModel):
 	company_id: str = ""
 	login: str = ""
 	has_user_token: bool = False
+	auth_pending: bool = False
+	auth_recipient: str = ""
 	last_sync_at: datetime | None = None
 	last_sync_count: int = 0
 
@@ -50,6 +52,7 @@ class YClientsIntegrationUpdateRequest(BaseModel):
 	company_id: str | None = None
 	login: str | None = None
 	password: str | None = None
+	auth_code: str | None = None
 
 
 class YClientsSyncResultSchema(BaseModel):
