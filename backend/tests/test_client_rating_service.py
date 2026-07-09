@@ -19,12 +19,27 @@ def test_rating_label_for() -> None:
 
 
 def test_visit_result_rating_no_show() -> None:
-	assert visit_result_rating("noShow", False, False, False) == 1.5
+	assert visit_result_rating("noShow", False, False, False, False, False, False, False, False) == 1.5
 
 
 def test_visit_result_rating_positive_visit() -> None:
-	rating = visit_result_rating("onTime", True, False, True)
+	rating = visit_result_rating("onTime", True, False, False, False, False, False, False, True)
 	assert rating >= 4.5
+
+
+def test_visit_result_rating_behavior_issues() -> None:
+	rating = visit_result_rating(
+		"onTime",
+		True,
+		True,
+		False,
+		True,
+		False,
+		False,
+		False,
+		False,
+	)
+	assert rating < 4.0
 
 
 def test_reliability_texts_reliable_client() -> None:

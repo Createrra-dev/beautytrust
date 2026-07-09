@@ -124,7 +124,12 @@ class VisitResult(Base):
 	appointment_id: Mapped[int] = mapped_column(ForeignKey("appointments.id"), unique=True)
 	punctuality: Mapped[str] = mapped_column(String(30), nullable=False)
 	paid_in_full: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	had_behavior_issues: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	was_unfriendly: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	had_scandal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	threatened_complaints: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	demanded_discount: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+	stole_from_salon: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	left_tips: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 	comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 

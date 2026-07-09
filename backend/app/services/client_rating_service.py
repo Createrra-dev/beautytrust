@@ -39,7 +39,12 @@ def reliability_texts(
 def visit_result_rating(
 	punctuality: str,
 	paid_in_full: bool,
+	had_behavior_issues: bool,
+	was_unfriendly: bool,
 	had_scandal: bool,
+	threatened_complaints: bool,
+	demanded_discount: bool,
+	stole_from_salon: bool,
 	left_tips: bool,
 ) -> float:
 	if punctuality == "noShow":
@@ -56,8 +61,18 @@ def visit_result_rating(
 	else:
 		score -= 1.0
 
-	if had_scandal:
-		score -= 2.0
+	if had_behavior_issues:
+		score -= 0.8
+		if was_unfriendly:
+			score -= 0.3
+		if had_scandal:
+			score -= 0.8
+		if threatened_complaints:
+			score -= 1.0
+		if demanded_discount:
+			score -= 0.5
+		if stole_from_salon:
+			score -= 1.5
 
 	if left_tips:
 		score += 0.2
@@ -138,8 +153,22 @@ def _visit_review_text(visit: models.VisitResult) -> str:
 	else:
 		parts.append("оплата неполная")
 
-	if visit.had_scandal:
-		parts.append("был скандал")
+	if visit.had_behavior_issues:
+		behavior_parts: list[str] = []
+		if visit.was_unfriendly:
+			behavior_parts.append("недружелюбное поведение")
+		if visit.had_scandal:
+			behavior_parts.append("скандал")
+		if visit.threatened_complaints:
+			behavior_parts.append("угрозы или жалобы")
+		if visit.demanded_discount:
+			behavior_parts.append("требовал скидку")
+		if visit.stole_from_salon:
+			behavior_parts.append("попытка кражи")
+		if behavior_parts:
+			parts.append(", ".join(behavior_parts))
+		else:
+			parts.append("проблемы с поведением")
 
 	if visit.left_tips:
 		parts.append("оставил чаевые")
@@ -164,7 +193,7 @@ def recalculate_profile_aggregates(db: Session, profile: models.ClientProfile) -
 		.join(models.Appointment, models.Appointment.id == models.VisitResult.appointment_id)
 		.where(
 			models.Appointment.client_phone_digits == profile.phone_digits,
-			models.VisitResult.had_scandal.is_(True),
+			models.VisitResult.had_behavior_issues.is_(True),
 		)
 	) or 0
 
@@ -205,7 +234,12 @@ def apply_visit_result_to_client(
 	rating = visit_result_rating(
 		visit.punctuality,
 		visit.paid_in_full,
+		visit.had_behavior_issues,
+		visit.was_unfriendly,
 		visit.had_scandal,
+		visit.threatened_complaints,
+		visit.demanded_discount,
+		visit.stole_from_salon,
 		visit.left_tips,
 	)
 	now = datetime.now(timezone.utc)

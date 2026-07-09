@@ -22,10 +22,15 @@ class VisitResultScreen extends StatefulWidget {
 }
 
 class _VisitResultScreenState extends State<VisitResultScreen> {
-	VisitPunctuality? _punctuality;
-	bool? _paidInFull;
-	bool? _hadScandal;
-	bool? _leftTips;
+	VisitPunctuality _punctuality = VisitPunctuality.onTime;
+	bool _paidInFull = true;
+	bool _hadBehaviorIssues = false;
+	bool _wasUnfriendly = false;
+	bool _hadScandal = false;
+	bool _threatenedComplaints = false;
+	bool _demandedDiscount = false;
+	bool _stoleFromSalon = false;
+	bool _leftTips = false;
 	final _commentController = TextEditingController();
 	String? _errorText;
 	var _isSaving = false;
@@ -34,7 +39,12 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 		return calculateVisitResultRating(
 			punctuality: _punctuality,
 			paidInFull: _paidInFull,
+			hadBehaviorIssues: _hadBehaviorIssues,
+			wasUnfriendly: _wasUnfriendly,
 			hadScandal: _hadScandal,
+			threatenedComplaints: _threatenedComplaints,
+			demandedDiscount: _demandedDiscount,
+			stoleFromSalon: _stoleFromSalon,
 			leftTips: _leftTips,
 		);
 	}
@@ -46,10 +56,30 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 		if (initialResult != null) {
 			_punctuality = initialResult.punctuality;
 			_paidInFull = initialResult.paidInFull;
+			_hadBehaviorIssues = initialResult.hadBehaviorIssues;
+			_wasUnfriendly = initialResult.wasUnfriendly;
 			_hadScandal = initialResult.hadScandal;
+			_threatenedComplaints = initialResult.threatenedComplaints;
+			_demandedDiscount = initialResult.demandedDiscount;
+			_stoleFromSalon = initialResult.stoleFromSalon;
 			_leftTips = initialResult.leftTips;
 			_commentController.text = initialResult.comment ?? '';
 		}
+	}
+
+	void _clearBehaviorDetails() {
+		_wasUnfriendly = false;
+		_hadScandal = false;
+		_threatenedComplaints = false;
+		_demandedDiscount = false;
+		_stoleFromSalon = false;
+	}
+
+	void _clearVisitDetails() {
+		_paidInFull = true;
+		_hadBehaviorIssues = false;
+		_leftTips = false;
+		_clearBehaviorDetails();
 	}
 
 	@override
@@ -64,38 +94,19 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 		}
 
 		final punctuality = _punctuality;
-		final paidInFull = _paidInFull;
-		final hadScandal = _hadScandal;
-		final leftTips = _leftTips;
-
-		if (punctuality == null) {
-			setState(() => _errorText = 'Укажите, пришёл ли клиент вовремя');
-			return;
-		}
-
-		if (punctuality != VisitPunctuality.noShow) {
-			if (paidInFull == null) {
-				setState(() => _errorText = 'Укажите, оплатил ли клиент полностью');
-				return;
-			}
-
-			if (hadScandal == null) {
-				setState(() => _errorText = 'Укажите, был ли скандал');
-				return;
-			}
-
-			if (leftTips == null) {
-				setState(() => _errorText = 'Укажите, оставил ли клиент чаевые');
-				return;
-			}
-		}
 
 		final comment = _commentController.text.trim();
 		final visitResult = VisitResult(
 			punctuality: punctuality,
-			paidInFull: paidInFull ?? false,
-			hadScandal: hadScandal ?? false,
-			leftTips: leftTips ?? false,
+			paidInFull: punctuality == VisitPunctuality.noShow ? false : _paidInFull,
+			hadBehaviorIssues:
+				punctuality == VisitPunctuality.noShow ? false : _hadBehaviorIssues,
+			wasUnfriendly: _hadBehaviorIssues && _wasUnfriendly,
+			hadScandal: _hadBehaviorIssues && _hadScandal,
+			threatenedComplaints: _hadBehaviorIssues && _threatenedComplaints,
+			demandedDiscount: _hadBehaviorIssues && _demandedDiscount,
+			stoleFromSalon: _hadBehaviorIssues && _stoleFromSalon,
+			leftTips: punctuality == VisitPunctuality.noShow ? false : _leftTips,
 			comment: comment.isEmpty ? null : comment,
 		);
 
@@ -174,8 +185,8 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 	Widget build(BuildContext context) {
 		final appointment = widget.appointment;
 		final profile = ClientProfileService.profileFor(appointment);
-		final showVisitDetails = _punctuality != VisitPunctuality.noShow &&
-			_punctuality != null;
+		final showVisitDetails = _punctuality != VisitPunctuality.noShow;
+		final showBehaviorDetails = showVisitDetails && _hadBehaviorIssues;
 
 		return SafeArea(
 			child: Column(
@@ -222,9 +233,7 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 													_punctuality = value;
 													_errorText = null;
 													if (value == VisitPunctuality.noShow) {
-														_paidInFull = null;
-														_hadScandal = null;
-														_leftTips = null;
+														_clearVisitDetails();
 													}
 												});
 											},
@@ -250,19 +259,85 @@ class _VisitResultScreenState extends State<VisitResultScreen> {
 										const SizedBox(height: 12),
 										_VisitQuestionCard(
 											title: 'Поведение',
-											subtitle: 'Был скандал во время визита?',
+											subtitle: 'Были проблемы с поведением?',
 											child: _BinaryChoiceRow(
 												firstLabel: 'Да',
 												secondLabel: 'Нет',
-												value: _hadScandal,
+												value: _hadBehaviorIssues,
 												onChanged: (value) {
 													setState(() {
-														_hadScandal = value;
+														_hadBehaviorIssues = value;
 														_errorText = null;
+														if (!value) {
+															_clearBehaviorDetails();
+														}
 													});
 												},
 											),
 										),
+										if (showBehaviorDetails) ...[
+											const SizedBox(height: 12),
+											_VisitQuestionCard(
+												title: 'Что произошло',
+												subtitle: 'Можно выбрать несколько пунктов',
+												child: Wrap(
+													spacing: 8,
+													runSpacing: 8,
+													children: [
+														_BehaviorToggleChip(
+															label: 'Не дружелюбен',
+															selected: _wasUnfriendly,
+															onTap: () {
+																setState(() {
+																	_wasUnfriendly = !_wasUnfriendly;
+																	_errorText = null;
+																});
+															},
+														),
+														_BehaviorToggleChip(
+															label: 'Скандал',
+															selected: _hadScandal,
+															onTap: () {
+																setState(() {
+																	_hadScandal = !_hadScandal;
+																	_errorText = null;
+																});
+															},
+														),
+														_BehaviorToggleChip(
+															label: 'Угрозы / жалобы',
+															selected: _threatenedComplaints,
+															onTap: () {
+																setState(() {
+																	_threatenedComplaints = !_threatenedComplaints;
+																	_errorText = null;
+																});
+															},
+														),
+														_BehaviorToggleChip(
+															label: 'Требовал скидку',
+															selected: _demandedDiscount,
+															onTap: () {
+																setState(() {
+																	_demandedDiscount = !_demandedDiscount;
+																	_errorText = null;
+																});
+															},
+														),
+														_BehaviorToggleChip(
+															label: 'Что-то украл',
+															selected: _stoleFromSalon,
+															onTap: () {
+																setState(() {
+																	_stoleFromSalon = !_stoleFromSalon;
+																	_errorText = null;
+																});
+															},
+														),
+													],
+												),
+											),
+										],
 										const SizedBox(height: 12),
 										_VisitQuestionCard(
 											title: 'Чаевые',
@@ -659,6 +734,49 @@ class _BinaryChoiceRow extends StatelessWidget {
 					),
 				),
 			],
+		);
+	}
+}
+
+class _BehaviorToggleChip extends StatelessWidget {
+	const _BehaviorToggleChip({
+		required this.label,
+		required this.selected,
+		required this.onTap,
+	});
+
+	final String label;
+	final bool selected;
+	final VoidCallback onTap;
+
+	@override
+	Widget build(BuildContext context) {
+		return Material(
+			color: selected
+				? AppColors.primary.withValues(alpha: 0.15)
+				: AppColors.surfaceElevated,
+			borderRadius: BorderRadius.circular(12),
+			child: InkWell(
+				onTap: onTap,
+				borderRadius: BorderRadius.circular(12),
+				child: Container(
+					padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+					decoration: BoxDecoration(
+						borderRadius: BorderRadius.circular(12),
+						border: Border.all(
+							color: selected ? AppColors.primary : AppColors.border,
+						),
+					),
+					child: Text(
+						label,
+						style: TextStyle(
+							color: selected ? AppColors.textPrimary : AppColors.textMuted,
+							fontSize: 13,
+							fontWeight: FontWeight.w600,
+						),
+					),
+				),
+			),
 		);
 	}
 }

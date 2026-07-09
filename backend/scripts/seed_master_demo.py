@@ -258,6 +258,7 @@ def seed_master_demo(db, master: models.Master, *, clear: bool = False) -> dict[
 			appointment_id=appointment.id,
 			punctuality=punctuality,
 			paid_in_full=paid,
+			had_behavior_issues=scandal,
 			had_scandal=scandal,
 			left_tips=tips,
 			comment=comment,

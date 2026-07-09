@@ -8,26 +8,55 @@ class VisitResult {
 	const VisitResult({
 		required this.punctuality,
 		required this.paidInFull,
+		required this.hadBehaviorIssues,
+		required this.wasUnfriendly,
 		required this.hadScandal,
+		required this.threatenedComplaints,
+		required this.demandedDiscount,
+		required this.stoleFromSalon,
 		required this.leftTips,
 		this.comment,
 	});
 
 	final VisitPunctuality punctuality;
 	final bool paidInFull;
+	final bool hadBehaviorIssues;
+	final bool wasUnfriendly;
 	final bool hadScandal;
+	final bool threatenedComplaints;
+	final bool demandedDiscount;
+	final bool stoleFromSalon;
 	final bool leftTips;
 	final String? comment;
 
 	bool get clientAttended {
 		return punctuality != VisitPunctuality.noShow;
 	}
+
+	static VisitResult defaults() {
+		return const VisitResult(
+			punctuality: VisitPunctuality.onTime,
+			paidInFull: true,
+			hadBehaviorIssues: false,
+			wasUnfriendly: false,
+			hadScandal: false,
+			threatenedComplaints: false,
+			demandedDiscount: false,
+			stoleFromSalon: false,
+			leftTips: false,
+		);
+	}
 }
 
 double? calculateVisitResultRating({
 	VisitPunctuality? punctuality,
 	bool? paidInFull,
+	bool? hadBehaviorIssues,
+	bool? wasUnfriendly,
 	bool? hadScandal,
+	bool? threatenedComplaints,
+	bool? demandedDiscount,
+	bool? stoleFromSalon,
 	bool? leftTips,
 }) {
 	if (punctuality == null) {
@@ -38,7 +67,7 @@ double? calculateVisitResultRating({
 		return 1.5;
 	}
 
-	if (paidInFull == null || hadScandal == null || leftTips == null) {
+	if (paidInFull == null || hadBehaviorIssues == null || leftTips == null) {
 		return null;
 	}
 
@@ -55,8 +84,23 @@ double? calculateVisitResultRating({
 		score -= 1.0;
 	}
 
-	if (hadScandal) {
-		score -= 2.0;
+	if (hadBehaviorIssues) {
+		score -= 0.8;
+		if (wasUnfriendly == true) {
+			score -= 0.3;
+		}
+		if (hadScandal == true) {
+			score -= 0.8;
+		}
+		if (threatenedComplaints == true) {
+			score -= 1.0;
+		}
+		if (demandedDiscount == true) {
+			score -= 0.5;
+		}
+		if (stoleFromSalon == true) {
+			score -= 1.5;
+		}
 	}
 
 	if (leftTips) {

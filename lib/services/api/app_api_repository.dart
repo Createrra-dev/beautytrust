@@ -88,7 +88,12 @@ class AppApiRepository {
 						? 'late'
 						: 'noShow',
 				'paid_in_full': visitResult.paidInFull,
+				'had_behavior_issues': visitResult.hadBehaviorIssues,
+				'was_unfriendly': visitResult.wasUnfriendly,
 				'had_scandal': visitResult.hadScandal,
+				'threatened_complaints': visitResult.threatenedComplaints,
+				'demanded_discount': visitResult.demandedDiscount,
+				'stole_from_salon': visitResult.stoleFromSalon,
 				'left_tips': visitResult.leftTips,
 				'comment': visitResult.comment,
 			},
@@ -528,10 +533,17 @@ class AppApiRepository {
 		VisitResult? visitResult;
 		final visitJson = json['visit_result'] as Map<String, dynamic>?;
 		if (visitJson != null) {
+			final hadScandal = visitJson['had_scandal'] as bool? ?? false;
 			visitResult = VisitResult(
 				punctuality: _punctualityFromApi(visitJson['punctuality'] as String),
 				paidInFull: visitJson['paid_in_full'] as bool,
-				hadScandal: visitJson['had_scandal'] as bool,
+				hadBehaviorIssues:
+					visitJson['had_behavior_issues'] as bool? ?? hadScandal,
+				wasUnfriendly: visitJson['was_unfriendly'] as bool? ?? false,
+				hadScandal: hadScandal,
+				threatenedComplaints: visitJson['threatened_complaints'] as bool? ?? false,
+				demandedDiscount: visitJson['demanded_discount'] as bool? ?? false,
+				stoleFromSalon: visitJson['stole_from_salon'] as bool? ?? false,
 				leftTips: visitJson['left_tips'] as bool,
 				comment: visitJson['comment'] as String?,
 			);

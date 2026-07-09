@@ -52,7 +52,12 @@ class ClientCheckResponse(BaseModel):
 class VisitResultSchema(BaseModel):
 	punctuality: str
 	paid_in_full: bool
-	had_scandal: bool
+	had_behavior_issues: bool = False
+	was_unfriendly: bool = False
+	had_scandal: bool = False
+	threatened_complaints: bool = False
+	demanded_discount: bool = False
+	stole_from_salon: bool = False
 	left_tips: bool
 	comment: str | None = None
 

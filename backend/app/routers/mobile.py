@@ -138,7 +138,12 @@ def _appointment_schema(appointment: models.Appointment) -> AppointmentSchema:
 		visit_result = VisitResultSchema(
 			punctuality=appointment.visit_result.punctuality,
 			paid_in_full=appointment.visit_result.paid_in_full,
+			had_behavior_issues=appointment.visit_result.had_behavior_issues,
+			was_unfriendly=appointment.visit_result.was_unfriendly,
 			had_scandal=appointment.visit_result.had_scandal,
+			threatened_complaints=appointment.visit_result.threatened_complaints,
+			demanded_discount=appointment.visit_result.demanded_discount,
+			stole_from_salon=appointment.visit_result.stole_from_salon,
 			left_tips=appointment.visit_result.left_tips,
 			comment=appointment.visit_result.comment,
 		)
@@ -955,18 +960,39 @@ async def save_visit_result(
 ) -> AppointmentSchema:
 	appointment = _get_master_appointment(db, master.id, appointment_id)
 
+	if not body.had_behavior_issues:
+		body = body.model_copy(
+			update={
+				"was_unfriendly": False,
+				"had_scandal": False,
+				"threatened_complaints": False,
+				"demanded_discount": False,
+				"stole_from_salon": False,
+			}
+		)
+
 	if appointment.visit_result:
 		visit_result = appointment.visit_result
 		visit_result.punctuality = body.punctuality
 		visit_result.paid_in_full = body.paid_in_full
+		visit_result.had_behavior_issues = body.had_behavior_issues
+		visit_result.was_unfriendly = body.was_unfriendly
 		visit_result.had_scandal = body.had_scandal
+		visit_result.threatened_complaints = body.threatened_complaints
+		visit_result.demanded_discount = body.demanded_discount
+		visit_result.stole_from_salon = body.stole_from_salon
 		visit_result.left_tips = body.left_tips
 		visit_result.comment = body.comment
 	else:
 		visit_result = models.VisitResult(
 			punctuality=body.punctuality,
 			paid_in_full=body.paid_in_full,
+			had_behavior_issues=body.had_behavior_issues,
+			was_unfriendly=body.was_unfriendly,
 			had_scandal=body.had_scandal,
+			threatened_complaints=body.threatened_complaints,
+			demanded_discount=body.demanded_discount,
+			stole_from_salon=body.stole_from_salon,
 			left_tips=body.left_tips,
 			comment=body.comment,
 		)
