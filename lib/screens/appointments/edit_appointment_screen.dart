@@ -170,6 +170,9 @@ class _EditAppointmentScreenState extends State<EditAppointmentScreen> {
 		);
 
 		await DashboardDataService.updateAppointment(updatedAppointment);
+		if (!mounted) {
+			return;
+		}
 		Navigator.of(context).pop(phoneChanged);
 	}
 

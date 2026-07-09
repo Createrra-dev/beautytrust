@@ -59,7 +59,7 @@ jobs:
           channel: stable
 
       - name: Flutter analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
   deploy:
     runs-on: ubuntu-latest

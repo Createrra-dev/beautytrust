@@ -108,16 +108,14 @@ class _BeautyMotionTabBarState extends State<BeautyMotionTabBar>
 		}
 
 		_labels = widget.labels;
-		_icons = Map.fromIterable(
-			_labels,
-			key: (label) => label,
-			value: (label) => widget.icons![_labels.indexOf(label)],
-		);
-		_iconWidgets = Map.fromIterable(
-			_labels,
-			key: (label) => label,
-			value: (label) => widget.iconWidgets?[_labels.indexOf(label)],
-		);
+		_icons = {
+			for (final label in _labels)
+				label: widget.icons![_labels.indexOf(label)],
+		};
+		_iconWidgets = {
+			for (final label in _labels)
+				label: widget.iconWidgets?[_labels.indexOf(label)],
+		};
 
 		_selectedTab = widget.initialSelectedTab;
 		_activeIcon = _icons[_selectedTab];
