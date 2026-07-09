@@ -178,50 +178,54 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 						title: 'Детали записи',
 						onBack: () => Navigator.of(context).pop(),
 					),
-					Padding(
-						padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.stretch,
-							children: [
-								_ClientDataCard(
-									appointment: appointment,
-									profile: profile,
-									ratingColor: ratingColor,
-								),
-								const SizedBox(height: 12),
-								_AppointmentDetailsCard(
-									appointment: appointment,
-									onEdit: _openEditScreen,
-									onDelete: _confirmDelete,
-									onVisitResult: _openVisitResultScreen,
-								),
-							],
-						),
-					),
-					const SizedBox(height: 12),
 					Expanded(
-						child: _isLoadingProfile
-							? const Center(child: CircularProgressIndicator())
-							: SingleChildScrollView(
+						child: SingleChildScrollView(
 							padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-							child: Container(
-								padding: const EdgeInsets.all(16),
-								decoration: BoxDecoration(
-									color: AppColors.surface,
-									borderRadius: BorderRadius.circular(16),
-									border: Border.all(color: AppColors.border),
-								),
-								child: Column(
-									crossAxisAlignment: CrossAxisAlignment.stretch,
-									children: [
-										_ReviewsSection(reviews: profile.reviews),
-										const SizedBox(height: 16),
-										_ReliabilityBanner(
-											profile: profile,
-											ratingColor: ratingColor,
+							child: Column(
+								crossAxisAlignment: CrossAxisAlignment.stretch,
+								children: [
+									_ClientDataCard(
+										appointment: appointment,
+										profile: profile,
+										ratingColor: ratingColor,
+									),
+									const SizedBox(height: 12),
+									_AppointmentDetailsCard(
+										appointment: appointment,
+										onEdit: _openEditScreen,
+										onDelete: _confirmDelete,
+										onVisitResult: _openVisitResultScreen,
+									),
+									const SizedBox(height: 12),
+									Container(
+										padding: const EdgeInsets.all(16),
+										decoration: BoxDecoration(
+											color: AppColors.surface,
+											borderRadius: BorderRadius.circular(16),
+											border: Border.all(color: AppColors.border),
 										),
-									],
-								),
+										child: Column(
+											crossAxisAlignment: CrossAxisAlignment.stretch,
+											children: [
+												if (_isLoadingProfile)
+													const Padding(
+														padding: EdgeInsets.symmetric(vertical: 24),
+														child: Center(
+															child: CircularProgressIndicator(),
+														),
+													)
+												else ...[
+													_ReviewsSection(reviews: profile.reviews),
+													const SizedBox(height: 16),
+													_ReliabilityBanner(
+														profile: profile,
+														ratingColor: ratingColor,
+													),
+												],
+											],
+										),
+									),
+								],
 							),
 						),
 					),
@@ -424,35 +428,8 @@ class _AppointmentDetailsCard extends StatelessWidget {
 							),
 						],
 					),
-					Container(
-						padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-						decoration: BoxDecoration(
-							color: AppColors.primary.withValues(alpha: 0.12),
-							borderRadius: BorderRadius.circular(8),
-						),
-						child: const Row(
-							children: [
-								Icon(
-									Icons.cloud_download_outlined,
-									size: 16,
-									color: AppColors.primary,
-								),
-								SizedBox(width: 8),
-								Expanded(
-									child: Text(
-										'Данные загружены из YClients',
-										style: TextStyle(
-											color: AppColors.primary,
-											fontSize: 12,
-											fontWeight: FontWeight.w600,
-										),
-									),
-								),
-							],
-						),
-					),
 					if (staffName != null && staffName.isNotEmpty) ...[
-						const SizedBox(height: 12),
+						const SizedBox(height: 4),
 						Row(
 							children: [
 								_YClientsStaffAvatar(
@@ -465,7 +442,7 @@ class _AppointmentDetailsCard extends StatelessWidget {
 										staffName,
 										style: const TextStyle(
 											color: AppColors.textPrimary,
-											fontSize: 15,
+											fontSize: 16,
 											fontWeight: FontWeight.w600,
 										),
 									),
@@ -497,6 +474,34 @@ class _AppointmentDetailsCard extends StatelessWidget {
 					_DetailInfoRow(
 						label: 'Стоимость',
 						value: formatServicePrice(appointment.servicePrice),
+					),
+					const SizedBox(height: 12),
+					Container(
+						padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+						decoration: BoxDecoration(
+							color: AppColors.primary.withValues(alpha: 0.12),
+							borderRadius: BorderRadius.circular(8),
+						),
+						child: const Row(
+							children: [
+								Icon(
+									Icons.cloud_download_outlined,
+									size: 16,
+									color: AppColors.primary,
+								),
+								SizedBox(width: 8),
+								Expanded(
+									child: Text(
+										'Данные загружены из YClients',
+										style: TextStyle(
+											color: AppColors.primary,
+											fontSize: 12,
+											fontWeight: FontWeight.w600,
+										),
+									),
+								),
+							],
+						),
 					),
 					const SizedBox(height: 14),
 					FilledButton.icon(
@@ -634,7 +639,7 @@ class _YClientsStaffAvatar extends StatelessWidget {
 		final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?';
 
 		return CircleAvatar(
-			radius: 24,
+			radius: 28,
 			backgroundColor: AppColors.surfaceElevated,
 			backgroundImage: url != null && url.isNotEmpty ? NetworkImage(url) : null,
 			onBackgroundImageError: url != null && url.isNotEmpty ? (_, _) {} : null,
@@ -643,7 +648,7 @@ class _YClientsStaffAvatar extends StatelessWidget {
 					initial,
 					style: const TextStyle(
 						color: AppColors.textPrimary,
-						fontSize: 18,
+						fontSize: 20,
 						fontWeight: FontWeight.w700,
 					),
 				)
