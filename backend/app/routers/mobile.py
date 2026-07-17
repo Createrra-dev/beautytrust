@@ -3,14 +3,15 @@ from datetime import datetime, timezone
 from io import StringIO
 from uuid import uuid4
 import csv
+import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import and_, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db import models
-from app.db.session import get_db
+from app.db.session import SessionLocal, get_db
 from app.deps.auth import get_current_master
 from app.deps.rate_limit import rate_limit_client_check
 from app.schemas.api import (
@@ -65,11 +66,36 @@ from app.services.yclients_service import (
 	YClientsError,
 	authenticate_user,
 	confirm_authentication,
+	import_yclients_client_no_shows,
 	sync_yclients_appointments,
 	should_sync_yclients,
 	YCLIENTS_SYNC_INTERVALS_MINUTES,
 	yclients_integration_schema,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _run_yclients_no_shows_import(master_id: int) -> None:
+	"""Background: full fail_visits import after successful YClients auth."""
+	db = SessionLocal()
+	try:
+		master = db.scalar(select(models.Master).where(models.Master.id == master_id))
+		if master is None or not master.yclients_enabled or not master.yclients_user_token:
+			return
+		rows = import_yclients_client_no_shows(db, master)
+		with_fails = sum(1 for row in rows if row["fail_visits_count"] > 0)
+		logger.info(
+			"yclients_no_shows_import_done master_id=%s clients=%s with_fails=%s",
+			master_id,
+			len(rows),
+			with_fails,
+		)
+	except Exception:
+		logger.exception("yclients_no_shows_import_failed master_id=%s", master_id)
+	finally:
+		db.close()
+
 
 _RU_MONTHS = (
 	"",
@@ -665,12 +691,14 @@ async def get_yclients_integration(
 @router.patch("/profile/yclients", response_model=YClientsIntegrationSchema)
 async def update_yclients_integration(
 	body: YClientsIntegrationUpdateRequest,
+	background_tasks: BackgroundTasks,
 	db: Session = Depends(get_db),
 	master: models.Master = Depends(get_current_master),
 ) -> YClientsIntegrationSchema:
 	updates = body.model_dump(exclude_unset=True)
 	password = updates.pop("password", None)
 	auth_code = updates.pop("auth_code", None)
+	auth_just_succeeded = False
 
 	if "enabled" in updates and updates["enabled"] is not None:
 		master.yclients_enabled = bool(updates["enabled"])
@@ -708,6 +736,7 @@ async def update_yclients_integration(
 			)
 			master.yclients_auth_uuid = None
 			master.yclients_auth_recipient = None
+			auth_just_succeeded = True
 		except YClientsError as error:
 			raise HTTPException(status_code=400, detail=error.message) from error
 	elif password and master.yclients_login and master.yclients_partner_token:
@@ -721,6 +750,7 @@ async def update_yclients_integration(
 				master.yclients_user_token = auth_result.user_token
 				master.yclients_auth_uuid = None
 				master.yclients_auth_recipient = None
+				auth_just_succeeded = True
 			elif auth_result.auth_pending:
 				master.yclients_user_token = None
 				master.yclients_auth_uuid = auth_result.auth_uuid
@@ -750,6 +780,12 @@ async def update_yclients_integration(
 		except YClientsError as error:
 			raise HTTPException(status_code=400, detail=error.message) from error
 		db.refresh(master)
+		if auth_just_succeeded:
+			background_tasks.add_task(_run_yclients_no_shows_import, master.id)
+			logger.info(
+				"yclients_no_shows_import_scheduled master_id=%s",
+				master.id,
+			)
 
 	return YClientsIntegrationSchema(**yclients_integration_schema(master))
 
