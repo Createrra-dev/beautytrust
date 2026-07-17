@@ -124,6 +124,7 @@ async def deliver_otp_code(
 	session.delivered = True
 	db.add(session)
 	save_phone_telegram_link(db, session.phone_digits, chat_id)
+	db.commit()
 	return True
 
 

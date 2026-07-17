@@ -18,19 +18,38 @@ def _api_url(method: str) -> str:
 
 
 async def send_message(chat_id: int, text: str) -> None:
-	async with httpx.AsyncClient(timeout=30.0) as client:
-		response = await client.post(
-			_api_url("sendMessage"),
-			json={
-				"chat_id": chat_id,
-				"text": text,
-				"parse_mode": "HTML",
-			},
-		)
-		payload = response.json()
-		if not payload.get("ok"):
-			logger.error("Telegram sendMessage failed: %s", payload)
-			raise TelegramBotError(payload.get("description", "Failed to send Telegram message"))
+	last_error: Exception | None = None
+	for attempt in range(1, 3):
+		try:
+			async with httpx.AsyncClient(timeout=20.0) as client:
+				response = await client.post(
+					_api_url("sendMessage"),
+					json={
+						"chat_id": chat_id,
+						"text": text,
+						"parse_mode": "HTML",
+					},
+				)
+				payload = response.json()
+				if not payload.get("ok"):
+					logger.error("Telegram sendMessage failed: %s", payload)
+					raise TelegramBotError(
+						payload.get("description", "Failed to send Telegram message"),
+					)
+				return
+		except TelegramBotError:
+			raise
+		except httpx.HTTPError as error:
+			last_error = error
+			logger.warning(
+				"Telegram sendMessage attempt %s failed chat_id=%s: %s",
+				attempt,
+				chat_id,
+				error,
+			)
+	raise TelegramBotError(
+		f"Telegram временно недоступен: {last_error}",
+	) from last_error
 
 
 async def setup_webhook() -> None:

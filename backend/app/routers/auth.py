@@ -1,6 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+import logging
 
 from app.config import settings
 from app.db import models
@@ -33,6 +34,8 @@ from app.services.zvonok_service import (
 	get_flash_call_status,
 )
 from app.services.telegram_webhook import handle_telegram_update
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -109,6 +112,12 @@ async def send_otp(payload: OtpSendRequest, db: Session = Depends(get_db)) -> Ot
 		code_sent = await deliver_otp_session(db, session, otp_code)
 	except ZvonokError as error:
 		raise HTTPException(status_code=503, detail=str(error)) from error
+	except Exception:
+		logger.exception("otp_send_failed phone=%s", phone_digits)
+		raise HTTPException(
+			status_code=503,
+			detail="Не удалось отправить код. Попробуйте ещё раз или откройте Telegram-бота.",
+		) from None
 
 	response = build_otp_send_response(session, code_sent)
 	return OtpSendResponse(**response)
