@@ -14,6 +14,39 @@ def risk_level_from_rating(rating: float) -> str:
 	return "high"
 
 
+def risk_level_for_client(
+	rating: float,
+	no_shows: int = 0,
+	scandals: int = 0,
+) -> str:
+	"""Risk for UI/appointments: rating + no-shows + scandals."""
+	if rating < 3 or no_shows >= 3 or scandals >= 2:
+		return "high"
+	if rating >= 4 and no_shows == 0 and scandals == 0:
+		return "low"
+	return "medium"
+
+
+def appointment_score_from_profile(profile: models.ClientProfile) -> tuple[float, str]:
+	"""Rating + risk for an appointment card from shared client profile."""
+	rating = float(profile.reviews_average)
+	no_shows = int(profile.no_shows_count or 0)
+	scandals = int(profile.scandals_count or 0)
+	risk = risk_level_for_client(rating, no_shows, scandals)
+
+	# Surface no-show history even when reviews still look “average”
+	if no_shows >= 10:
+		rating = min(rating, 1.5)
+	elif no_shows >= 5:
+		rating = min(rating, 2.0)
+	elif no_shows >= 3:
+		rating = min(rating, 2.5)
+	elif no_shows >= 1 and rating >= 4:
+		rating = min(rating, 3.5)
+
+	return round(rating, 1), risk
+
+
 def rating_label_for(rating: float) -> str:
 	if rating >= 4.5:
 		return "Отличный"
@@ -304,8 +337,7 @@ def apply_visit_result_to_client(
 
 	recalculate_profile_aggregates(db, profile)
 
-	appointment.client_rating = profile.reviews_average
-	appointment.risk_level = risk_level_from_rating(profile.reviews_average)
+	appointment.client_rating, appointment.risk_level = appointment_score_from_profile(profile)
 	appointment.status = "no_show" if visit.punctuality == "noShow" else "completed"
 	appointment.days_since_verified = days_since_last_check(db, appointment.client_phone_digits)
 	db.add(appointment)
@@ -330,8 +362,32 @@ def sync_appointment_client_fields(
 	if profile is None:
 		return
 
-	appointment.client_rating = profile.reviews_average
-	appointment.risk_level = risk_level_from_rating(profile.reviews_average)
+	appointment.client_rating, appointment.risk_level = appointment_score_from_profile(profile)
+	db.add(appointment)
+
+
+def refresh_scheduled_appointments_for_phones(
+	db: Session,
+	master_id: int,
+	phone_digits_list: list[str],
+) -> int:
+	"""Re-apply profile score/risk on scheduled appointments after YClients import."""
+	phones = {phone for phone in phone_digits_list if phone}
+	if not phones:
+		return 0
+
+	updated = 0
+	appointments = db.scalars(
+		select(models.Appointment).where(
+			models.Appointment.master_id == master_id,
+			models.Appointment.status == "scheduled",
+			models.Appointment.client_phone_digits.in_(phones),
+		)
+	).all()
+	for appointment in appointments:
+		sync_appointment_client_fields(db, appointment)
+		updated += 1
+	return updated
 
 
 def add_client_review(

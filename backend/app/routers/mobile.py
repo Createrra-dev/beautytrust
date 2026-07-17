@@ -52,6 +52,7 @@ from app.schemas.api import (
 from app.services.client_rating_service import (
 	add_client_review,
 	apply_visit_result_to_client,
+	appointment_score_from_profile,
 	days_since_last_check,
 	normalize_phone_digits,
 	risk_level_from_rating,
@@ -1231,14 +1232,15 @@ async def check_client(
 
 	now = datetime.now(timezone.utc)
 	days_since = days_since_last_check(db, digits)
+	score, risk = appointment_score_from_profile(profile)
 	db.add(
 		models.CheckHistoryRecord(
 			external_id=f"check-{int(now.timestamp() * 1000)}",
 			master_id=master.id,
 			client_name=profile.client_name,
 			phone_digits=profile.phone_digits,
-			rating=profile.reviews_average,
-			risk_level=_risk_level_from_rating(profile.reviews_average),
+			rating=score,
+			risk_level=risk,
 			checked_at=now,
 		)
 	)
@@ -1251,8 +1253,8 @@ async def check_client(
 		)
 	).all():
 		appointment.days_since_verified = days_since
-		appointment.client_rating = profile.reviews_average
-		appointment.risk_level = _risk_level_from_rating(profile.reviews_average)
+		appointment.client_rating = score
+		appointment.risk_level = risk
 		db.add(appointment)
 
 	db.commit()
@@ -1297,8 +1299,7 @@ async def create_client_review(
 			models.Appointment.client_phone_digits == digits,
 		)
 	).all():
-		appointment.client_rating = profile.reviews_average
-		appointment.risk_level = _risk_level_from_rating(profile.reviews_average)
+		appointment.client_rating, appointment.risk_level = appointment_score_from_profile(profile)
 		db.add(appointment)
 	db.commit()
 

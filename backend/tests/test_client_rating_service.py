@@ -1,7 +1,9 @@
 from app.services.audit_service import should_audit
 from app.services.client_rating_service import (
+	appointment_score_from_profile,
 	rating_label_for,
 	reliability_texts,
+	risk_level_for_client,
 	risk_level_from_rating,
 	visit_result_rating,
 )
@@ -11,6 +13,24 @@ def test_risk_level_from_rating() -> None:
 	assert risk_level_from_rating(4.5) == "low"
 	assert risk_level_from_rating(3.5) == "medium"
 	assert risk_level_from_rating(2.0) == "high"
+
+
+def test_risk_level_for_client_uses_no_shows() -> None:
+	assert risk_level_for_client(4.5, no_shows=0) == "low"
+	assert risk_level_for_client(3.5, no_shows=1) == "medium"
+	assert risk_level_for_client(3.5, no_shows=3) == "high"
+	assert risk_level_for_client(4.8, no_shows=0, scandals=2) == "high"
+
+
+def test_appointment_score_penalizes_no_shows() -> None:
+	class _Profile:
+		reviews_average = 3.5
+		no_shows_count = 5
+		scandals_count = 0
+
+	rating, risk = appointment_score_from_profile(_Profile())  # type: ignore[arg-type]
+	assert risk == "high"
+	assert rating <= 2.0
 
 
 def test_rating_label_for() -> None:

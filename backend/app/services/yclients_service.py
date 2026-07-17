@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session
 from app.db import models
 from app.services.client_rating_service import (
 	apply_yclients_fail_visits,
+	appointment_score_from_profile,
 	days_since_last_check,
-	risk_level_from_rating,
+	refresh_scheduled_appointments_for_phones,
 )
 from app.services.uploads import uploads_root
 
@@ -289,6 +290,11 @@ def import_yclients_client_no_shows(
 				"fail_visits_count": fail_visits,
 			}
 		)
+	refresh_scheduled_appointments_for_phones(
+		db,
+		master.id,
+		[row["phone_digits"] for row in rows],
+	)
 	db.commit()
 	return rows
 
@@ -446,8 +452,7 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 			continue
 
 		profile = apply_yclients_fail_visits(db, phone_digits, client_name, fail_visits)
-		client_rating = profile.reviews_average
-		risk_level = risk_level_from_rating(client_rating)
+		client_rating, risk_level = appointment_score_from_profile(profile)
 		days_since_verified = days_since_last_check(db, phone_digits)
 		duration_label = _format_duration_label(seance_length)
 		external_id = f"yclients-{master.id}-{record_id}"
