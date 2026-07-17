@@ -11,9 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.db import models
 from app.services.client_rating_service import (
+	apply_yclients_fail_visits,
 	days_since_last_check,
-	get_or_create_client_profile,
-	normalize_phone_digits,
 	risk_level_from_rating,
 )
 from app.services.uploads import uploads_root
@@ -211,7 +210,7 @@ def _parse_record_datetime(record: dict[str, Any]) -> datetime | None:
 	return None
 
 
-def _extract_client(record: dict[str, Any]) -> tuple[str, str]:
+def _extract_client(record: dict[str, Any]) -> tuple[str, str, int]:
 	client = record.get("client") or {}
 	name = (
 		client.get("name")
@@ -225,7 +224,73 @@ def _extract_client(record: dict[str, Any]) -> tuple[str, str]:
 		digits = digits[1:]
 	if len(digits) != 10:
 		raise ValueError("invalid phone")
-	return str(name).strip()[:120], digits
+	fail_raw = client.get("fail_visits_count")
+	try:
+		fail_visits = max(0, int(fail_raw or 0))
+	except (TypeError, ValueError):
+		fail_visits = 0
+	return str(name).strip()[:120], digits, fail_visits
+
+
+def _client_stats_from_records(records: list[dict[str, Any]]) -> dict[str, tuple[str, int]]:
+	"""phone_digits -> (client_name, fail_visits_count)."""
+	stats: dict[str, tuple[str, int]] = {}
+	for record in records:
+		if record.get("deleted"):
+			continue
+		try:
+			client_name, phone_digits, fail_visits = _extract_client(record)
+		except ValueError:
+			continue
+		existing = stats.get(phone_digits)
+		if existing is None or fail_visits >= existing[1]:
+			stats[phone_digits] = (client_name, fail_visits)
+	return stats
+
+
+def import_yclients_client_no_shows(
+	db: Session,
+	master: models.Master,
+	*,
+	start_date: str = "2023-01-01",
+	end_date: str | None = None,
+) -> list[dict[str, Any]]:
+	"""Pull client fail_visits_count from YClients records and persist to profiles."""
+	if not master.yclients_enabled:
+		return []
+
+	partner_token = (master.yclients_partner_token or "").strip()
+	company_id = (master.yclients_company_id or "").strip()
+	user_token = (master.yclients_user_token or "").strip()
+	if not partner_token or not company_id or not user_token:
+		raise YClientsError("Заполните Partner Token, Company ID и выполните авторизацию YClients")
+
+	if end_date is None:
+		end_date = datetime.now(MOSCOW_TZ).date().isoformat()
+
+	records = fetch_records(
+		partner_token,
+		user_token,
+		company_id,
+		start_date=start_date,
+		end_date=end_date,
+	)
+	stats = _client_stats_from_records(records)
+	rows: list[dict[str, Any]] = []
+	for phone_digits, (client_name, fail_visits) in sorted(
+		stats.items(),
+		key=lambda item: (-item[1][1], item[1][0].lower(), item[0]),
+	):
+		apply_yclients_fail_visits(db, phone_digits, client_name, fail_visits)
+		rows.append(
+			{
+				"client_name": client_name,
+				"phone_digits": phone_digits,
+				"fail_visits_count": fail_visits,
+			}
+		)
+	db.commit()
+	return rows
 
 
 def _extract_service(record: dict[str, Any]) -> tuple[str, int, int]:
@@ -368,7 +433,7 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 			continue
 
 		try:
-			client_name, phone_digits = _extract_client(record)
+			client_name, phone_digits, fail_visits = _extract_client(record)
 		except ValueError:
 			skipped += 1
 			continue
@@ -380,7 +445,7 @@ def sync_yclients_appointments(db: Session, master: models.Master) -> dict[str, 
 			skipped += 1
 			continue
 
-		profile = get_or_create_client_profile(db, phone_digits, client_name)
+		profile = apply_yclients_fail_visits(db, phone_digits, client_name, fail_visits)
 		client_rating = profile.reviews_average
 		risk_level = risk_level_from_rating(client_rating)
 		days_since_verified = days_since_last_check(db, phone_digits)

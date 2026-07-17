@@ -66,6 +66,7 @@ class ClientProfile(Base):
 	reviews_average: Mapped[float] = mapped_column(Float, nullable=False)
 	reviews_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	no_shows_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+	yclients_fail_visits_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	scandals_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 	reliability_title: Mapped[str] = mapped_column(String(200), nullable=False)
 	reliability_subtitle: Mapped[str] = mapped_column(String(200), nullable=False)

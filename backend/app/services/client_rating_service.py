@@ -208,7 +208,8 @@ def recalculate_profile_aggregates(db: Session, profile: models.ClientProfile) -
 	else:
 		average = profile.reviews_average
 
-	profile.no_shows_count = int(no_shows)
+	yclients_fails = int(profile.yclients_fail_visits_count or 0)
+	profile.no_shows_count = max(int(no_shows), yclients_fails)
 	profile.scandals_count = int(scandals)
 	profile.reviews_count = len(reviews)
 	profile.reviews_average = average
@@ -217,6 +218,37 @@ def recalculate_profile_aggregates(db: Session, profile: models.ClientProfile) -
 	profile.reliability_title = title
 	profile.reliability_subtitle = subtitle
 	db.add(profile)
+
+
+def apply_yclients_fail_visits(
+	db: Session,
+	phone_digits: str,
+	client_name: str,
+	fail_visits_count: int,
+) -> models.ClientProfile:
+	profile = get_or_create_client_profile(db, phone_digits, client_name)
+	fail_count = max(0, int(fail_visits_count))
+	profile.yclients_fail_visits_count = fail_count
+
+	local_no_shows = db.scalar(
+		select(func.count())
+		.select_from(models.VisitResult)
+		.join(models.Appointment, models.Appointment.id == models.VisitResult.appointment_id)
+		.where(
+			models.Appointment.client_phone_digits == phone_digits,
+			models.VisitResult.punctuality == "noShow",
+		)
+	) or 0
+	profile.no_shows_count = max(int(local_no_shows), fail_count)
+	title, subtitle = reliability_texts(
+		profile.reviews_average,
+		profile.no_shows_count,
+		profile.scandals_count,
+	)
+	profile.reliability_title = title
+	profile.reliability_subtitle = subtitle
+	db.add(profile)
+	return profile
 
 
 def apply_visit_result_to_client(
